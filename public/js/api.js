@@ -72,11 +72,12 @@ function requireAdminPage() {
   const user = requireLogin();
   if (!user) return null;
   
-  // Em v4.0, roles são armazenados por ID (role_id) ou nome (role_name)
-  // Admin é role_id 2 ou role_name 'admin'
-  const isAdmin = user.role_id === 2 || user.roleId === 2 || user.role_name === 'admin';
+  // roleId vem em camelCase do backend (veja authService.login)
+  // role_id é do banco, mas é convertido para roleId no JSON
+  const isAdmin = user.roleId === 2;
   
   if (!isAdmin) {
+    console.error('User is not admin:', user);
     location.href = '/index.html';
     return null;
   }
