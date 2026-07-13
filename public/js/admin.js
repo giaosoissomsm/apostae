@@ -8,6 +8,9 @@
     return div.innerHTML;
   }
 
+  // Converte o valor de um <input type="datetime-local"> (hora local do navegador)
+  // pra um ISO string UTC, que é o que o backend espera de forma inequívoca -
+  // assim não importa em que fuso o servidor está rodando.
   function localToIso(value) {
     if (!value) return null;
     const d = new Date(value);
@@ -15,6 +18,7 @@
     return d.toISOString();
   }
 
+  // Converte 'YYYY-MM-DD HH:MM:SS' (UTC, como vem do backend) pra um Date válido.
   function parseServerDate(value) {
     if (!value) return null;
     return new Date(value.replace(' ', 'T') + 'Z');
@@ -26,7 +30,12 @@
     return d.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
   }
 
-  // ========== MERCADOS ==========
+  async function refreshCredits() {
+    const me = await Api.get('/users/me');
+    document.getElementById('creditsAmount').textContent = fmtCredits(me.credits);
+  }
+
+  // ---------- Mercados ----------
   document.getElementById('newMarketForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     const body = {
@@ -124,7 +133,7 @@
     });
   }
 
-  // ========== USUÁRIOS ==========
+  // ---------- Usuários ----------
   document.getElementById('newUserForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     const body = {
@@ -152,7 +161,7 @@
       console.log('✓ Resposta recebida:', response);
       console.log('  Tipo:', Array.isArray(response) ? 'array' : typeof response);
       
-      // IMPORTANTE: Backend retorna ARRAY DIRETO
+      // Backend retorna ARRAY DIRETO: [...]
       // NÃO objeto {users: [...]}
       let users;
       
