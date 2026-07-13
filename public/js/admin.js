@@ -250,7 +250,7 @@
         if (!confirm('Tem certeza? Sessão do usuário será invalidada.')) return;
         
         try {
-          await Api.put(`/api/auth/password/admin/${userId}`, { password: newPassword });
+          await Api.put(`/auth/password/admin/${userId}`, { password: newPassword });
           showToast('Senha alterada com sucesso!', 'success');
           loadUsers();
         } catch (err) {
@@ -268,7 +268,7 @@
         if (shouldForce && !confirm('Forçar esse usuário a mudar senha no próximo login?')) return;
         
         try {
-          await Api.put(`/api/auth/force-password-change/${userId}`, { enabled: shouldForce });
+          await Api.put(`/auth/force-password-change/${userId}`, { enabled: shouldForce });
           showToast(shouldForce ? 'Mudança de senha forçada!' : 'Força de mudança removida.', 'success');
           loadUsers();
         } catch (err) {

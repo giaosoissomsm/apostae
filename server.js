@@ -151,8 +151,8 @@ async function initializeDefaults() {
   try {
     // Verifica se roles já existem
     const roleResult = await query('SELECT COUNT(*) as count FROM roles;');
-    
-    if (roleResult.rows[0].count === 0) {
+
+    if (parseInt(roleResult.rows[0].count, 10) === 0) {
       logger.info('  Criando roles padrão...');
       
       // Insere roles
