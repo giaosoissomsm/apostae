@@ -8,9 +8,6 @@
     return div.innerHTML;
   }
 
-  // Converte o valor de um <input type="datetime-local"> (hora local do navegador)
-  // pra um ISO string UTC, que é o que o backend espera de forma inequívoca -
-  // assim não importa em que fuso o servidor está rodando.
   function localToIso(value) {
     if (!value) return null;
     const d = new Date(value);
@@ -18,7 +15,6 @@
     return d.toISOString();
   }
 
-  // Converte 'YYYY-MM-DD HH:MM:SS' (UTC, como vem do backend) pra um Date válido.
   function parseServerDate(value) {
     if (!value) return null;
     return new Date(value.replace(' ', 'T') + 'Z');
@@ -30,12 +26,7 @@
     return d.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
   }
 
-  async function refreshCredits() {
-    const me = await Api.get('/users/me');
-    document.getElementById('creditsAmount').textContent = fmtCredits(me.credits);
-  }
-
-  // ---------- Mercados ----------
+  // ========== MERCADOS ==========
   document.getElementById('newMarketForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     const body = {
@@ -104,7 +95,7 @@
     body.querySelectorAll('[data-close]').forEach((btn) => {
       btn.addEventListener('click', async () => {
         try {
-          await Api.post(`/markets/${btn.dataset.close}/close`);
+          await Api.put(`/markets/${btn.dataset.close}/status`, { status: 'closed' });
           showToast('Mercado fechado.', 'success');
           loadMarkets();
         } catch (err) { showToast(err.message, 'error'); }
@@ -113,11 +104,9 @@
 
     body.querySelectorAll('[data-resolve]').forEach((btn) => {
       btn.addEventListener('click', async () => {
-        const label = btn.dataset.outcome === 'yes' ? 'SIM' : 'NÃO';
-        if (!confirm(`Confirma resolver esse mercado como ${label}? Isso paga quem acertou.`)) return;
         try {
-          await Api.post(`/markets/${btn.dataset.resolve}/resolve`, { outcome: btn.dataset.outcome });
-          showToast('Mercado resolvido e créditos pagos!', 'success');
+          await Api.put(`/markets/${btn.dataset.resolve}/resolve`, { outcome: btn.dataset.outcome });
+          showToast('Mercado resolvido.', 'success');
           loadMarkets();
         } catch (err) { showToast(err.message, 'error'); }
       });
@@ -125,9 +114,9 @@
 
     body.querySelectorAll('[data-delete-market]').forEach((btn) => {
       btn.addEventListener('click', async () => {
-        if (!confirm('Deletar esse mercado PERMANENTEMENTE? Isso também delete todas as apostas e devolve os créditos.')) return;
+        if (!confirm('Tem certeza?')) return;
         try {
-          await Api.del(`/markets/${btn.dataset.deleteMarket}`);
+          await Api.delete(`/markets/${btn.dataset.deleteMarket}`);
           showToast('Mercado deletado.', 'success');
           loadMarkets();
         } catch (err) { showToast(err.message, 'error'); }
@@ -135,7 +124,7 @@
     });
   }
 
-  // ---------- Usuários ----------
+  // ========== USUÁRIOS ==========
   document.getElementById('newUserForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     const body = {
@@ -157,45 +146,65 @@
   async function loadUsers() {
     try {
       console.log('📋 loadUsers() iniciado...');
+      console.log('👤 Usuário atual:', user);
       
       const response = await Api.get('/users');
       console.log('✓ Resposta recebida:', response);
+      console.log('  Tipo:', Array.isArray(response) ? 'array' : typeof response);
       
-      // v4.0 retorna { users: [...], pagination: {...} }
-      const users = response?.users;
+      // IMPORTANTE: Backend retorna ARRAY DIRETO
+      // NÃO objeto {users: [...]}
+      let users;
       
-      if (!users || !Array.isArray(users)) {
-        console.error('❌ Resposta inválida - users não é array:', response);
-        document.getElementById('usersBody').innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--nao); padding:24px;">⚠️ Erro: Estrutura de resposta inválida</td></tr>`;
+      if (Array.isArray(response)) {
+        console.log('✓ É array direto');
+        users = response;
+      } else if (response?.users && Array.isArray(response.users)) {
+        console.log('✓ É objeto com .users');
+        users = response.users;
+      } else {
+        console.error('❌ Estrutura inválida:', response);
+        document.getElementById('usersBody').innerHTML = 
+          `<tr><td colspan="6" style="text-align:center; color:var(--nao); padding:24px;">
+            ⚠️ Erro: Estrutura inválida
+          </td></tr>`;
         return;
       }
 
       console.log(`✓ ${users.length} usuários carregados`);
-      const body = document.getElementById('usersBody');
       
       if (users.length === 0) {
-        body.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--text-muted); padding:24px;">Nenhum usuário encontrado.</td></tr>`;
-        console.log('⚠️ Nenhum usuário no banco');
+        document.getElementById('usersBody').innerHTML = 
+          `<tr><td colspan="6" style="text-align:center; color:var(--text-muted); padding:24px;">
+            Nenhum usuário encontrado.
+          </td></tr>`;
         return;
       }
 
-      // Renderiza cada usuário
+      const body = document.getElementById('usersBody');
+      
+      // Renderizar usuários
       body.innerHTML = users.map((u) => {
         const isSelf = u.id === user.id;
-        console.log(`  Usuário: ${u.username} (id=${u.id}, role_name=${u.role_name}, is_active=${u.is_active})`);
+        
+        // Determinar se é admin
+        const isAdmin = u.is_admin === true || u.role_name === 'admin' || u.role_id === 2;
+        const roleDisplay = isAdmin ? 'Admin' : 'User';
+        
+        console.log(`  ${u.username}: admin=${isAdmin}, active=${u.is_active}`);
         
         return `
         <tr>
           <td><strong>${escapeHtml(u.username)}</strong>${isSelf ? ' <span style="color:var(--text-muted); font-size:11px;">(você)</span>' : ''}</td>
           <td>${escapeHtml(u.email || '—')}</td>
-          <td><span class="tag ${u.role_name === 'admin' ? 'admin' : ''}">${u.role_name === 'admin' ? 'Admin' : 'User'}</span></td>
-          <td><span class="tag" style="${u.is_active ? 'color:var(--sim); border-color:var(--sim-dim);' : 'color: var(--nao); border-color: var(--nao-dim);'}">${u.is_active ? '✓ Ativo' : '✗ Inativo'}</span></td>
+          <td><span class="tag ${isAdmin ? 'admin' : ''}">${roleDisplay}</span></td>
+          <td><span class="tag" style="${u.is_active ? 'color:var(--sim); border-color:var(--sim-dim);' : 'color:var(--nao); border-color:var(--nao-dim);'}">${u.is_active ? '✓ Ativo' : '✗ Inativo'}</span></td>
           <td>
             <div class="inline-form">
               ${!isSelf ? `
                 <button class="btn-ghost" data-changepassword="${u.id}" style="font-size:12px;">Senha</button>
                 <button class="btn-ghost" data-forcepasswordchange="${u.id}" style="font-size:12px;">${u.password_expires_next_login ? 'Desfazer' : 'Forçar pwd'}</button>
-                <button class="btn-ghost" data-togglerole="${u.id}" data-current="${u.role_name === 'admin' ? 1 : 0}">${u.role_name === 'admin' ? 'Remover admin' : 'Tornar admin'}</button>
+                <button class="btn-ghost" data-togglerole="${u.id}" data-current="${isAdmin ? 1 : 0}">${isAdmin ? 'Remover admin' : 'Tornar admin'}</button>
                 <button class="btn-ghost" data-togglestatus="${u.id}" data-current="${u.is_active ? 1 : 0}">${u.is_active ? 'Desativar' : 'Ativar'}</button>
                 <button class="btn-ghost" data-delete="${u.id}" style="color: var(--nao); border-color: var(--nao-dim);">Deletar</button>
               ` : '<span style="color:var(--text-muted); font-size:12px;">—</span>'}
@@ -204,45 +213,22 @@
         </tr>`;
       }).join('');
 
-      console.log('✓ HTML renderizado');
+      console.log('✓ Tabela renderizada');
       
       // Setup event listeners
       setupUserButtonListeners(body, users);
       console.log('✓ Event listeners configurados');
       
     } catch (err) {
-      console.error('❌ Erro ao carregar usuários:', err);
-      document.getElementById('usersBody').innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--nao); padding:24px;">❌ Erro: ${escapeHtml(err.message)}</td></tr>`;
+      console.error('❌ Erro:', err);
+      document.getElementById('usersBody').innerHTML = 
+        `<tr><td colspan="6" style="text-align:center; color:var(--nao); padding:24px;">
+          ❌ ${escapeHtml(err.message)}
+        </td></tr>`;
     }
   }
 
   function setupUserButtonListeners(body, users) {
-    // Ver apostas
-    body.querySelectorAll('[data-viewwagers]').forEach((btn) => {
-      btn.addEventListener('click', async () => {
-        const userId = btn.dataset.viewwagers;
-        const userData = users.find(u => u.id == userId);
-        if (!userData) return;
-        
-        try {
-          const wagers = await Api.get(`/users/me/wagers?user_id=${userId}`);
-          let html = `<h3>Apostas de ${escapeHtml(userData.username)}</h3><table class="mini-table"><tr><th>Mercado</th><th>Escolha</th><th>Valor</th><th>Status</th></tr>`;
-          if (wagers && wagers.length > 0) {
-            wagers.forEach(w => {
-              html += `<tr><td>${escapeHtml(w.market_question || '?')}</td><td>${w.choice === 'yes' ? 'Sim' : 'Não'}</td><td>${w.amount}</td><td>${w.status}</td></tr>`;
-            });
-          } else {
-            html += `<tr><td colspan="4" style="text-align:center; color:var(--text-muted);">Sem apostas</td></tr>`;
-          }
-          html += `</table>`;
-          alert(html);
-        } catch (err) {
-          showToast('Erro ao carregar apostas: ' + err.message, 'error');
-        }
-      });
-    });
-
-    // Mudar senha
     body.querySelectorAll('[data-changepassword]').forEach((btn) => {
       btn.addEventListener('click', async () => {
         const userId = btn.dataset.changepassword;
@@ -264,7 +250,6 @@
       });
     });
 
-    // Forçar mudança de senha
     body.querySelectorAll('[data-forcepasswordchange]').forEach((btn) => {
       btn.addEventListener('click', async () => {
         const userId = btn.dataset.forcepasswordchange;
@@ -283,17 +268,19 @@
       });
     });
 
-    // Alternar role (admin/user)
     body.querySelectorAll('[data-togglerole]').forEach((btn) => {
       btn.addEventListener('click', async () => {
         const userId = btn.dataset.togglerole;
-        const makeAdmin = btn.dataset.current === '0';
+        const currentIsAdmin = btn.dataset.current === '1';
+        const newRole = currentIsAdmin ? 'user' : 'admin';
         
-        if (!confirm(`${makeAdmin ? 'Tornar' : 'Remover'} admin dessa pessoa?`)) return;
+        if (!confirm(`${currentIsAdmin ? 'Remover' : 'Tornar'} admin dessa pessoa?`)) return;
         
         try {
-          // role_id 2 = admin, 1 = user
-          await Api.put(`/users/${userId}/role`, { role_id: makeAdmin ? 2 : 1 });
+          await Api.put(`/users/${userId}/role`, { 
+            role_id: newRole === 'admin' ? 2 : 1,
+            role_name: newRole 
+          });
           showToast('Permissão alterada!', 'success');
           loadUsers();
         } catch (err) {
@@ -302,7 +289,6 @@
       });
     });
 
-    // Alternar status (ativo/inativo)
     body.querySelectorAll('[data-togglestatus]').forEach((btn) => {
       btn.addEventListener('click', async () => {
         const userId = btn.dataset.togglestatus;
@@ -320,7 +306,6 @@
       });
     });
 
-    // Deletar usuário
     body.querySelectorAll('[data-delete]').forEach((btn) => {
       btn.addEventListener('click', async () => {
         const userId = btn.dataset.delete;
@@ -338,103 +323,8 @@
       });
     });
   }
-        }
-      });
-    });
 
-    body.querySelectorAll('[data-forcepasswordchange]').forEach((btn) => {
-      btn.addEventListener('click', async () => {
-        const userId = btn.dataset.forcepasswordchange;
-        const isForcing = btn.textContent.includes('Forçar');
-        const msg = isForcing ? 'Força mudança de senha no próximo login?' : 'Remove requisição de mudança de senha?';
-        if (!confirm(msg)) return;
-        try {
-          await Api.put(`/users/${userId}/password-expires`, { enabled: isForcing });
-          showToast(isForcing ? 'Usuário será forçado a mudar senha.' : 'Requisição removida.', 'success');
-          loadUsers();
-        } catch (err) {
-          showToast(err.message, 'error');
-        }
-      });
-    });
-      btn.addEventListener('click', async () => {
-        const userId = btn.dataset.viewwagers;
-        const username = btn.closest('tr').querySelector('td').textContent;
-        try {
-          const wagers = await Api.get(`/wagers/user/${username}`);
-          showUserWagersAdmin(username, wagers);
-        } catch (err) {
-          showToast(err.message, 'error');
-        }
-      });
-    });
-
-    body.querySelectorAll('[data-delete]').forEach((btn) => {
-      btn.addEventListener('click', async () => {
-        const id = btn.dataset.delete;
-        if (!confirm('Excluir essa conta PERMANENTEMENTE? Não dá pra desfazer.')) return;
-        try {
-          await Api.del(`/users/${id}`);
-          showToast('Usuário excluído.', 'success');
-          loadUsers();
-        } catch (err) { showToast(err.message, 'error'); }
-      });
-    });
-  }
-
-  function showUserWagersAdmin(username, wagers) {
-    const modal = document.createElement('div');
-    modal.style.cssText = 'position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:100; overflow-y:auto; padding:20px;';
-    modal.innerHTML = `
-      <div style="background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); max-width:700px; margin:40px auto; padding:24px;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
-          <h2 style="margin:0; font-family:var(--font-display); font-size:20px;">Apostas de @${username}</h2>
-          <button onclick="this.closest('div').parentElement.remove()" style="background:none; border:none; color:var(--text-muted); font-size:24px; cursor:pointer; padding:0;">×</button>
-        </div>
-        <div>
-          ${wagers.length === 0 ? '<p style="text-align:center; color:var(--text-muted);">Nenhuma aposta.</p>' : `
-            <div style="display:grid; gap:8px; max-height:400px; overflow-y:auto;">
-              ${wagers.map((w) => `
-                <div style="padding:12px; background:var(--surface-2); border-radius:8px; display:flex; justify-content:space-between; align-items:center;">
-                  <div style="flex:1;">
-                    <div style="font-weight:500; margin-bottom:4px;">${escapeHtml(w.question)}</div>
-                    <div style="font-size:12px; color:var(--text-muted);">
-                      ${w.choice === 'yes' ? 'Sim' : 'Não'} · ${fmtCredits(w.amount)} fichas · ${w.status}
-                    </div>
-                  </div>
-                  <button class="btn-ghost" data-admin-delete-wager="${w.id}" style="color:var(--nao); border-color:var(--nao-dim); padding:4px 8px; font-size:12px;">Deletar</button>
-                </div>
-              `).join('')}
-            </div>
-          `}
-        </div>
-      </div>
-    `;
-    document.body.appendChild(modal);
-
-    modal.querySelectorAll('[data-admin-delete-wager]').forEach((btn) => {
-      btn.addEventListener('click', async () => {
-        if (!confirm('Deletar essa aposta?')) return;
-        try {
-          await Api.post(`/wagers/${btn.dataset.adminDeleteWager}/admin-delete`);
-          showToast('Aposta deletada.', 'success');
-          modal.remove();
-          loadUsers();
-        } catch (err) {
-          showToast(err.message, 'error');
-        }
-      });
-    });
-
-    modal.addEventListener('click', (e) => {
-      if (e.target === modal) modal.remove();
-    });
-  }
-
-  // Adicionar espaço pra closures funcionarem
-  const _noop = null;
-
-  refreshCredits();
+  // Carregar dados iniciais
   loadMarkets();
   loadUsers();
 })();
