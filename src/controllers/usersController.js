@@ -34,6 +34,34 @@ const listUsers = catchAsync(async (req, res) => {
 });
 
 /**
+ * POST /api/users - Cria novo usuário (admin only)
+ */
+const createUser = catchAsync(async (req, res) => {
+  const { username, email, password, is_admin } = req.body;
+
+  if (!username || !password) {
+    throw new ValidationError('Username e password são obrigatórios');
+  }
+
+  if (password.length < 6) {
+    throw new ValidationError('Senha deve ter ao menos 6 caracteres');
+  }
+
+  // Registra novo usuário
+  const user = await require('../services/authService').register(username, email, password);
+
+  // Se deve ser admin, altera role
+  if (is_admin) {
+    await userService.setRole(user.id, 2, req.user.id, req.ip); // role_id 2 = admin
+  }
+
+  res.status(201).json({
+    message: 'Usuário criado com sucesso',
+    user,
+  });
+});
+
+/**
  * GET /api/users/me - Dados do usuário atual
  */
 const getMe = catchAsync(async (req, res) => {
@@ -135,6 +163,7 @@ const getAuditLogs = catchAsync(async (req, res) => {
 
 module.exports = {
   listUsers,
+  createUser,
   getMe,
   getUser,
   searchUsers,

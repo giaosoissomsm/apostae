@@ -140,15 +140,14 @@
     e.preventDefault();
     const body = {
       username: document.getElementById('uUsername').value.trim(),
+      email: document.getElementById('uEmail').value.trim() || null,
       password: document.getElementById('uPassword').value,
-      credits: Number(document.getElementById('uCredits').value) || 1000,
       is_admin: document.getElementById('uIsAdmin').checked,
     };
     try {
       await Api.post('/users', body);
       showToast('Usuário criado!', 'success');
       e.target.reset();
-      document.getElementById('uCredits').value = 100;
       loadUsers();
     } catch (err) {
       showToast(err.message, 'error');
@@ -156,88 +155,170 @@
   });
 
   async function loadUsers() {
-    const users = await Api.get('/users');
-    const body = document.getElementById('usersBody');
-    body.innerHTML = users.map((u) => {
-      const isSelf = u.id === user.id;
-      return `
-      <tr>
-        <td>${escapeHtml(u.username)}${isSelf ? ' <span style="color:var(--text-muted); font-size:11px;">(você)</span>' : ''}</td>
-        <td class="mono">${fmtCredits(u.credits)}</td>
-        <td><span class="tag ${u.is_admin ? 'admin' : ''}">${u.is_admin ? 'Admin' : 'Usuário'}</span></td>
-        <td><span class="tag" style="${u.is_active ? '' : 'color: var(--nao); border-color: var(--nao-dim);'}">${u.is_active ? 'Ativo' : 'Desativado'}</span></td>
-        <td>
-          <div class="inline-form">
-            <input type="number" class="credit-input" data-id="${u.id}" placeholder="novo saldo" style="width:110px;" />
-            <button class="btn-ghost" data-setcredits="${u.id}">Ajustar</button>
-            ${!isSelf ? `
-              <button class="btn-ghost" data-viewwagers="${u.id}" style="font-size:12px;">Ver apostas</button>
-              <button class="btn-ghost" data-changepassword="${u.id}" style="font-size:12px;">Mudar senha</button>
-              <button class="btn-ghost" data-forcepasswordchange="${u.id}" style="font-size:12px;">${u.password_expires_next_login ? 'Desfazer força' : 'Forçar mudança'}</button>
-              <button class="btn-ghost" data-toggleadmin="${u.id}" data-current="${u.is_admin ? 1 : 0}">${u.is_admin ? 'Remover admin' : 'Tornar admin'}</button>
-              <button class="btn-ghost" data-togglestatus="${u.id}" data-current="${u.is_active ? 1 : 0}">${u.is_active ? 'Desativar' : 'Ativar'}</button>
-              <button class="btn-ghost" data-delete="${u.id}" style="color: var(--nao); border-color: var(--nao-dim);">Excluir</button>
-            ` : '<span style="color:var(--text-muted); font-size:12px;">—</span>'}
-          </div>
-        </td>
-      </tr>`;
-    }).join('');
+    try {
+      const response = await Api.get('/users');
+      // v4.0 retorna { users: [...], pagination: {...} }
+      const users = response.users || response;
+      const body = document.getElementById('usersBody');
+      
+      if (!users || users.length === 0) {
+        body.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--text-muted); padding:24px;">Nenhum usuário encontrado.</td></tr>`;
+        return;
+      }
 
-    body.querySelectorAll('[data-setcredits]').forEach((btn) => {
+      body.innerHTML = users.map((u) => {
+        const isSelf = u.id === user.id;
+        return `
+        <tr>
+          <td>${escapeHtml(u.username)}${isSelf ? ' <span style="color:var(--text-muted); font-size:11px;">(você)</span>' : ''}</td>
+          <td>${escapeHtml(u.email || '—')}</td>
+          <td><span class="tag ${u.role_name === 'admin' ? 'admin' : ''}">${u.role_name === 'admin' ? 'Admin' : 'Usuário'}</span></td>
+          <td><span class="tag" style="${u.is_active ? '' : 'color: var(--nao); border-color: var(--nao-dim);'}">${u.is_active ? 'Ativo' : 'Desativado'}</span></td>
+          <td>
+            <div class="inline-form">
+              ${!isSelf ? `
+                <button class="btn-ghost" data-viewwagers="${u.id}" style="font-size:12px;">Ver apostas</button>
+                <button class="btn-ghost" data-changepassword="${u.id}" style="font-size:12px;">Mudar senha</button>
+                <button class="btn-ghost" data-forcepasswordchange="${u.id}" style="font-size:12px;">${u.password_expires_next_login ? 'Desfazer força' : 'Forçar mudança'}</button>
+                <button class="btn-ghost" data-togglerole="${u.id}" data-current="${u.role_name === 'admin' ? 1 : 0}">${u.role_name === 'admin' ? 'Remover admin' : 'Tornar admin'}</button>
+                <button class="btn-ghost" data-togglestatus="${u.id}" data-current="${u.is_active ? 1 : 0}">${u.is_active ? 'Desativar' : 'Ativar'}</button>
+                <button class="btn-ghost" data-delete="${u.id}" style="color: var(--nao); border-color: var(--nao-dim);">Excluir</button>
+              ` : '<span style="color:var(--text-muted); font-size:12px;">—</span>'}
+            </div>
+          </td>
+        </tr>`;
+      }).join('');
+
+      // Event listeners para buttons
+      setupUserButtonListeners(body, users);
+    } catch (err) {
+      console.error('Erro ao carregar usuários:', err);
+      document.getElementById('usersBody').innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--nao); padding:24px;">Erro ao carregar usuários: ${escapeHtml(err.message)}</td></tr>`;
+    }
+  }
+
+  function setupUserButtonListeners(body, users) {
+    // Ver apostas
+    body.querySelectorAll('[data-viewwagers]').forEach((btn) => {
       btn.addEventListener('click', async () => {
-        const id = btn.dataset.setcredits;
-        const input = body.querySelector(`.credit-input[data-id="${id}"]`);
-        const credits = Number(input.value);
-        if (!Number.isFinite(credits) || credits < 0) return showToast('Valor inválido.', 'error');
+        const userId = btn.dataset.viewwagers;
+        const userData = users.find(u => u.id == userId);
+        if (!userData) return;
+        
         try {
-          await Api.put(`/users/${id}/credits`, { credits });
-          showToast('Créditos atualizados.', 'success');
-          loadUsers();
-        } catch (err) { showToast(err.message, 'error'); }
+          const wagers = await Api.get(`/users/me/wagers?user_id=${userId}`);
+          let html = `<h3>Apostas de ${escapeHtml(userData.username)}</h3><table class="mini-table"><tr><th>Mercado</th><th>Escolha</th><th>Valor</th><th>Status</th></tr>`;
+          if (wagers && wagers.length > 0) {
+            wagers.forEach(w => {
+              html += `<tr><td>${escapeHtml(w.market_question || '?')}</td><td>${w.choice === 'yes' ? 'Sim' : 'Não'}</td><td>${w.amount}</td><td>${w.status}</td></tr>`;
+            });
+          } else {
+            html += `<tr><td colspan="4" style="text-align:center; color:var(--text-muted);">Sem apostas</td></tr>`;
+          }
+          html += `</table>`;
+          alert(html);
+        } catch (err) {
+          showToast('Erro ao carregar apostas: ' + err.message, 'error');
+        }
       });
     });
 
-    body.querySelectorAll('[data-toggleadmin]').forEach((btn) => {
-      btn.addEventListener('click', async () => {
-        const id = btn.dataset.toggleadmin;
-        const makeAdmin = btn.dataset.current === '0';
-        try {
-          await Api.put(`/users/${id}/admin`, { is_admin: makeAdmin });
-          showToast('Permissão atualizada.', 'success');
-          loadUsers();
-        } catch (err) { showToast(err.message, 'error'); }
-      });
-    });
-
-    body.querySelectorAll('[data-togglestatus]').forEach((btn) => {
-      btn.addEventListener('click', async () => {
-        const id = btn.dataset.togglestatus;
-        const activate = btn.dataset.current === '0';
-        if (!activate && !confirm('Desativar essa conta? A pessoa não vai conseguir mais logar até você reativar.')) return;
-        try {
-          await Api.put(`/users/${id}/status`, { is_active: activate });
-          showToast(activate ? 'Usuário reativado.' : 'Usuário desativado.', 'success');
-          loadUsers();
-        } catch (err) { showToast(err.message, 'error'); }
-      });
-    });
-
+    // Mudar senha
     body.querySelectorAll('[data-changepassword]').forEach((btn) => {
       btn.addEventListener('click', async () => {
         const userId = btn.dataset.changepassword;
-        const newPassword = prompt('Digite a nova senha pra esse usuário (mín. 6 caracteres):');
+        const newPassword = prompt('Digite a nova senha (mín. 6 caracteres):');
         if (!newPassword || newPassword.length < 6) {
-          if (newPassword === null) return; // User cancelled
+          if (newPassword === null) return;
           showToast('Senha precisa ter ao menos 6 caracteres.', 'error');
           return;
         }
-        if (!confirm(`Tem certeza? A senha vai ser alterada e o usuário precisará fazer login novamente.`)) return;
+        if (!confirm('Tem certeza? Sessão do usuário será invalidada.')) return;
+        
         try {
-          await Api.put(`/users/${userId}/password`, { password: newPassword });
-          showToast('Senha alterada e sessão do usuário invalidada.', 'success');
+          await Api.put(`/api/auth/password/admin/${userId}`, { password: newPassword });
+          showToast('Senha alterada com sucesso!', 'success');
           loadUsers();
         } catch (err) {
           showToast(err.message, 'error');
+        }
+      });
+    });
+
+    // Forçar mudança de senha
+    body.querySelectorAll('[data-forcepasswordchange]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const userId = btn.dataset.forcepasswordchange;
+        const userData = users.find(u => u.id == userId);
+        const shouldForce = !userData.password_expires_next_login;
+        
+        if (shouldForce && !confirm('Forçar esse usuário a mudar senha no próximo login?')) return;
+        
+        try {
+          await Api.put(`/api/auth/force-password-change/${userId}`, { enabled: shouldForce });
+          showToast(shouldForce ? 'Mudança de senha forçada!' : 'Força de mudança removida.', 'success');
+          loadUsers();
+        } catch (err) {
+          showToast(err.message, 'error');
+        }
+      });
+    });
+
+    // Alternar role (admin/user)
+    body.querySelectorAll('[data-togglerole]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const userId = btn.dataset.togglerole;
+        const makeAdmin = btn.dataset.current === '0';
+        
+        if (!confirm(`${makeAdmin ? 'Tornar' : 'Remover'} admin dessa pessoa?`)) return;
+        
+        try {
+          // role_id 2 = admin, 1 = user
+          await Api.put(`/users/${userId}/role`, { role_id: makeAdmin ? 2 : 1 });
+          showToast('Permissão alterada!', 'success');
+          loadUsers();
+        } catch (err) {
+          showToast(err.message, 'error');
+        }
+      });
+    });
+
+    // Alternar status (ativo/inativo)
+    body.querySelectorAll('[data-togglestatus]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const userId = btn.dataset.togglestatus;
+        const activate = btn.dataset.current === '0';
+        
+        if (!activate && !confirm('Desativar essa conta? Pessoa não conseguirá logar.')) return;
+        
+        try {
+          await Api.put(`/users/${userId}/status`, { is_active: activate });
+          showToast(activate ? 'Usuário reativado!' : 'Usuário desativado!', 'success');
+          loadUsers();
+        } catch (err) {
+          showToast(err.message, 'error');
+        }
+      });
+    });
+
+    // Deletar usuário
+    body.querySelectorAll('[data-delete]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const userId = btn.dataset.delete;
+        const userData = users.find(u => u.id == userId);
+        
+        if (!confirm(`⚠️  Tem CERTEZA que quer deletar ${escapeHtml(userData.username)}? Isso é PERMANENTE!`)) return;
+        
+        try {
+          await Api.delete(`/users/${userId}`);
+          showToast('Usuário deletado!', 'success');
+          loadUsers();
+        } catch (err) {
+          showToast(err.message, 'error');
+        }
+      });
+    });
+  }
         }
       });
     });

@@ -56,6 +56,7 @@ const Api = (() => {
     post: (path, body) => request(path, { method: 'POST', body: JSON.stringify(body || {}) }),
     put: (path, body) => request(path, { method: 'PUT', body: JSON.stringify(body || {}) }),
     del: (path) => request(path, { method: 'DELETE' }),
+    delete: (path) => request(path, { method: 'DELETE' }), // Alias
   };
 })();
 
@@ -69,7 +70,13 @@ function requireLogin() {
 
 function requireAdminPage() {
   const user = requireLogin();
-  if (user && !user.is_admin) {
+  if (!user) return null;
+  
+  // Em v4.0, roles são armazenados por ID (role_id) ou nome (role_name)
+  // Admin é role_id 2 ou role_name 'admin'
+  const isAdmin = user.role_id === 2 || user.roleId === 2 || user.role_name === 'admin';
+  
+  if (!isAdmin) {
     location.href = '/index.html';
     return null;
   }

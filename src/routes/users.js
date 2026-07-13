@@ -15,6 +15,11 @@ router.get('/me', requireAuth, usersController.getMe);
 router.get('/', requireAuth, requireAdmin, usersController.listUsers);
 
 /**
+ * Admin: Criar novo usuário
+ */
+router.post('/', requireAuth, requireAdmin, usersController.createUser);
+
+/**
  * Admin: Buscar usuários
  */
 router.get('/search/:query', requireAuth, requireAdmin, usersController.searchUsers);
