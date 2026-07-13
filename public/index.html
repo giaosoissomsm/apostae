@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Zoeira Market</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+  <div class="topbar">
+    <div class="brand">ZOEIRA<span class="dot">.</span>MARKET</div>
+    <nav>
+      <a href="#" class="tab-link active" data-tab="markets">Mercados</a>
+      <a href="#" class="tab-link" data-tab="mine">Minhas fichas</a>
+      <a href="#" class="tab-link" data-tab="ranking">Ranking</a>
+      <a href="/admin.html" id="adminLink" style="display:none;">Admin</a>
+      <a href="/profile.html">Perfil</a>
+    </nav>
+    <div style="display:flex; align-items:center; gap:10px;">
+      <div class="credits-pill">💰 <span class="amount" id="creditsAmount">--</span></div>
+      <button class="btn-ghost" onclick="logout()">Sair</button>
+    </div>
+  </div>
+
+  <main>
+    <section id="tab-markets">
+      <div class="page-head">
+        <h1>Mercados</h1>
+        <p>Escolhe um lado, aposta seus créditos e reza pro azar dos outros.</p>
+      </div>
+      <div style="display: flex; gap: 12px; margin-bottom: 20px; border-bottom: 1px solid var(--line); padding-bottom: 12px;">
+        <button class="market-filter-btn active" data-filter="open">🟢 Abertos</button>
+        <button class="market-filter-btn" data-filter="closed">🔴 Fechados</button>
+        <button class="market-filter-btn" data-filter="resolved">✅ Resolvidos</button>
+      </div>
+      <div id="marketsGrid" class="markets-grid"></div>
+    </section>
+
+    <section id="tab-mine" style="display:none;">
+      <div class="page-head">
+        <h1>Minhas fichas</h1>
+        <p>Histórico de tudo que você já apostou por aqui.</p>
+      </div>
+      <div class="panel">
+        <table>
+          <thead>
+            <tr><th>Mercado</th><th>Lado</th><th>Valor</th><th>Odd</th><th>Retorno possível</th><th>Status</th><th></th></tr>
+          </thead>
+          <tbody id="myWagersBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="tab-ranking" style="display:none;">
+      <div class="page-head">
+        <h1>Ranking</h1>
+        <p>Quem tá rico e quem tá quebrado no grupo.</p>
+      </div>
+      <div class="panel">
+        <table>
+          <thead><tr><th>#</th><th>Usuário</th><th>Créditos</th><th></th></tr></thead>
+          <tbody id="rankingBody"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <!-- Modal de apostas do usuário no ranking -->
+  <div id="userWagersModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:50; overflow-y:auto; padding:20px;">
+    <div style="background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); max-width:600px; margin:40px auto; padding:24px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+        <h2 id="modalTitle" style="margin:0; font-family:var(--font-display); font-size:20px;"></h2>
+        <button onclick="closeUserWagersModal()" style="background:none; border:none; color:var(--text-muted); font-size:24px; cursor:pointer; padding:0; width:32px; height:32px;">×</button>
+      </div>
+      <div id="userWagersContainer" style="max-height:400px; overflow-y:auto;"></div>
+    </div>
+  </div>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/session-timeout.js"></script>
+  <script src="/js/dashboard.js"></script>
+</body>
+</html>

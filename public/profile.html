@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Meu perfil · Zoeira Market</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+  <div class="topbar">
+    <div class="brand">ZOEIRA<span class="dot">.</span>MARKET</div>
+    <nav>
+      <a href="/index.html">Mercados</a>
+      <a href="/admin.html" id="adminLink" style="display:none;">Admin</a>
+      <a href="/profile.html" class="active">Perfil</a>
+    </nav>
+    <div style="display:flex; align-items:center; gap:10px;">
+      <div class="credits-pill">💰 <span class="amount" id="creditsAmount">--</span></div>
+      <button class="btn-ghost" onclick="logout()">Sair</button>
+    </div>
+  </div>
+
+  <main style="max-width: 480px;">
+    <div class="page-head">
+      <h1>Meu perfil</h1>
+      <p id="whoami" style="font-family: var(--font-mono);"></p>
+    </div>
+
+    <div class="panel">
+      <h2>Trocar senha</h2>
+      <div id="msgBox"></div>
+      <form id="pwForm">
+        <div class="field">
+          <label for="currentPassword">Senha atual</label>
+          <input id="currentPassword" type="password" autocomplete="current-password" required />
+        </div>
+        <div class="field">
+          <label for="newPassword">Nova senha</label>
+          <input id="newPassword" type="password" autocomplete="new-password" required minlength="6" />
+        </div>
+        <div class="field">
+          <label for="confirmPassword">Confirmar nova senha</label>
+          <input id="confirmPassword" type="password" autocomplete="new-password" required minlength="6" />
+        </div>
+        <button class="btn-primary btn-block" type="submit">Atualizar senha</button>
+      </form>
+    </div>
+  </main>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/session-timeout.js"></script>
+  <script src="/js/profile.js"></script>
+</body>
+</html>
