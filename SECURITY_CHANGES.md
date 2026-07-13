@@ -1,4 +1,4 @@
-# Zoeira Market v3.0 — Gerenciamento Seguro de Senhas & Timeout de Sessão
+# ApostaE v3.0 — Gerenciamento Seguro de Senhas & Timeout de Sessão
 
 ## 🎯 O Que Foi Implementado
 
@@ -391,4 +391,4 @@ Veja `SECURITY.md` para:
 
 ---
 
-**Zoeira Market v3.0** — Gerenciamento empresarial de senhas e sessões, pronto pra produção. 🎟️🔐
+**ApostaE v3.0** — Gerenciamento empresarial de senhas e sessões, pronto pra produção. 🎟️🔐

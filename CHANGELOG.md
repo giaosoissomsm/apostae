@@ -1,4 +1,4 @@
-# Changelog - Zoeira Market
+# Changelog - ApostaE
 
 ## v2.0.0 - Agendamento, Ranking Avançado & Gestão Completa
 
