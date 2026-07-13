@@ -1,4 +1,4 @@
-# Zoeira Market 🎟️
+# ApostaE 🎟️
 
 Mercado de apostas "Sim/Não" com odds, pra jogar com os amigos usando créditos fictícios.
 Estilo Polymarket, mas caseiro. Agora com agendamento automático, ranking competitivo e gerenciamento completo de contas.
