@@ -156,44 +156,63 @@
 
   async function loadUsers() {
     try {
-      const response = await Api.get('/users');
-      // v4.0 retorna { users: [...], pagination: {...} }
-      const users = response.users || response;
-      const body = document.getElementById('usersBody');
+      console.log('📋 loadUsers() iniciado...');
       
-      if (!users || users.length === 0) {
-        body.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--text-muted); padding:24px;">Nenhum usuário encontrado.</td></tr>`;
+      const response = await Api.get('/users');
+      console.log('✓ Resposta recebida:', response);
+      
+      // v4.0 retorna { users: [...], pagination: {...} }
+      const users = response?.users;
+      
+      if (!users || !Array.isArray(users)) {
+        console.error('❌ Resposta inválida - users não é array:', response);
+        document.getElementById('usersBody').innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--nao); padding:24px;">⚠️ Erro: Estrutura de resposta inválida</td></tr>`;
         return;
       }
 
+      console.log(`✓ ${users.length} usuários carregados`);
+      const body = document.getElementById('usersBody');
+      
+      if (users.length === 0) {
+        body.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--text-muted); padding:24px;">Nenhum usuário encontrado.</td></tr>`;
+        console.log('⚠️ Nenhum usuário no banco');
+        return;
+      }
+
+      // Renderiza cada usuário
       body.innerHTML = users.map((u) => {
         const isSelf = u.id === user.id;
+        console.log(`  Usuário: ${u.username} (id=${u.id}, role_name=${u.role_name}, is_active=${u.is_active})`);
+        
         return `
         <tr>
-          <td>${escapeHtml(u.username)}${isSelf ? ' <span style="color:var(--text-muted); font-size:11px;">(você)</span>' : ''}</td>
+          <td><strong>${escapeHtml(u.username)}</strong>${isSelf ? ' <span style="color:var(--text-muted); font-size:11px;">(você)</span>' : ''}</td>
           <td>${escapeHtml(u.email || '—')}</td>
-          <td><span class="tag ${u.role_name === 'admin' ? 'admin' : ''}">${u.role_name === 'admin' ? 'Admin' : 'Usuário'}</span></td>
-          <td><span class="tag" style="${u.is_active ? '' : 'color: var(--nao); border-color: var(--nao-dim);'}">${u.is_active ? 'Ativo' : 'Desativado'}</span></td>
+          <td><span class="tag ${u.role_name === 'admin' ? 'admin' : ''}">${u.role_name === 'admin' ? 'Admin' : 'User'}</span></td>
+          <td><span class="tag" style="${u.is_active ? 'color:var(--sim); border-color:var(--sim-dim);' : 'color: var(--nao); border-color: var(--nao-dim);'}">${u.is_active ? '✓ Ativo' : '✗ Inativo'}</span></td>
           <td>
             <div class="inline-form">
               ${!isSelf ? `
-                <button class="btn-ghost" data-viewwagers="${u.id}" style="font-size:12px;">Ver apostas</button>
-                <button class="btn-ghost" data-changepassword="${u.id}" style="font-size:12px;">Mudar senha</button>
-                <button class="btn-ghost" data-forcepasswordchange="${u.id}" style="font-size:12px;">${u.password_expires_next_login ? 'Desfazer força' : 'Forçar mudança'}</button>
+                <button class="btn-ghost" data-changepassword="${u.id}" style="font-size:12px;">Senha</button>
+                <button class="btn-ghost" data-forcepasswordchange="${u.id}" style="font-size:12px;">${u.password_expires_next_login ? 'Desfazer' : 'Forçar pwd'}</button>
                 <button class="btn-ghost" data-togglerole="${u.id}" data-current="${u.role_name === 'admin' ? 1 : 0}">${u.role_name === 'admin' ? 'Remover admin' : 'Tornar admin'}</button>
                 <button class="btn-ghost" data-togglestatus="${u.id}" data-current="${u.is_active ? 1 : 0}">${u.is_active ? 'Desativar' : 'Ativar'}</button>
-                <button class="btn-ghost" data-delete="${u.id}" style="color: var(--nao); border-color: var(--nao-dim);">Excluir</button>
+                <button class="btn-ghost" data-delete="${u.id}" style="color: var(--nao); border-color: var(--nao-dim);">Deletar</button>
               ` : '<span style="color:var(--text-muted); font-size:12px;">—</span>'}
             </div>
           </td>
         </tr>`;
       }).join('');
 
-      // Event listeners para buttons
+      console.log('✓ HTML renderizado');
+      
+      // Setup event listeners
       setupUserButtonListeners(body, users);
+      console.log('✓ Event listeners configurados');
+      
     } catch (err) {
-      console.error('Erro ao carregar usuários:', err);
-      document.getElementById('usersBody').innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--nao); padding:24px;">Erro ao carregar usuários: ${escapeHtml(err.message)}</td></tr>`;
+      console.error('❌ Erro ao carregar usuários:', err);
+      document.getElementById('usersBody').innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--nao); padding:24px;">❌ Erro: ${escapeHtml(err.message)}</td></tr>`;
     }
   }
 
