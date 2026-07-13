@@ -1,14 +1,14 @@
 const express = require('express');
 const authController = require('../controllers/authController');
 const { requireAuth, requireAdmin } = require('../middleware/auth');
-const { loginLimiter, passwordLimiter } = require('../middleware/rateLimiter');
+const { loginLimiter, registerLimiter, passwordLimiter } = require('../middleware/rateLimiter');
 
 const router = express.Router();
 
 /**
  * Públicos (sem autenticação)
  */
-router.post('/register', loginLimiter, authController.register);
+router.post('/register', registerLimiter, authController.register);
 router.post('/login', loginLimiter, authController.login);
 
 /**
