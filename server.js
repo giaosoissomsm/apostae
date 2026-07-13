@@ -12,7 +12,6 @@ const env = require('./src/config/env');
 const { pool, query } = require('./src/config/database');
 const redis = require('./src/config/redis');
 const { errorHandler } = require('./src/middleware/errorHandler');
-const { generalLimiter } = require('./src/middleware/rateLimiter');
 const logger = require('./src/utils/logger');
 
 // Rotas
@@ -32,9 +31,6 @@ const app = express();
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
-
-// Rate limiting geral
-app.use(generalLimiter);
 
 // Logging de requisições (dev)
 if (env.NODE_ENV === 'development') {
@@ -208,6 +204,37 @@ async function initializeDefaults() {
       );
 
       logger.info('  ✓ Dados padrão criados');
+    }
+
+    // Verifica se admin user já existe
+    const adminResult = await query('SELECT id FROM users WHERE username = $1;', ['admin']);
+    
+    if (adminResult.rows.length === 0) {
+      logger.info('  Criando usuário admin...');
+      
+      const bcrypt = require('bcryptjs');
+      const passwordHash = bcrypt.hashSync('admin123', 10);
+      
+      // Cria usuário admin (role_id 2)
+      const userResult = await query(
+        `INSERT INTO users (username, email, password_hash, role_id, is_active)
+         VALUES ($1, $2, $3, $4, $5)
+         RETURNING id;`,
+        ['admin', 'admin@apostae.local', passwordHash, 2, true]
+      );
+
+      const adminId = userResult.rows[0].id;
+
+      // Cria carteira do admin
+      await query(
+        'INSERT INTO wallets (user_id, balance) VALUES ($1, $2);',
+        [adminId, 1000]
+      );
+
+      logger.info('  ✓ Usuário admin criado');
+      logger.info('     Username: admin');
+      logger.info('     Senha: admin123');
+      logger.info('     ⚠️  MUDE A SENHA NA PRIMEIRA OPORTUNIDADE!');
     }
   } catch (err) {
     logger.warn('Erro ao inicializar dados padrão', err.message);
