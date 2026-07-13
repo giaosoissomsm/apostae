@@ -99,8 +99,8 @@
     </div>
       <form id="newUserForm" class="inline-form">
         <input id="uUsername" placeholder="usuário" required />
+        <input id="uEmail" type="email" placeholder="email (opcional)" />
         <input id="uPassword" type="password" placeholder="senha" required />
-        <input id="uCredits" type="number" placeholder="créditos iniciais" value="100" />
         <label style="display:flex; align-items:center; gap:6px; font-size:13px; color: var(--text-muted);">
           <input id="uIsAdmin" type="checkbox" style="width:auto;" /> admin
         </label>
@@ -111,7 +111,7 @@
     <div class="panel">
       <h2>Usuários</h2>
       <table>
-        <thead><tr><th>Usuário</th><th>Créditos</th><th>Tipo</th><th>Status</th><th>Ações</th></tr></thead>
+        <thead><tr><th>Usuário</th><th>Email</th><th>Tipo</th><th>Status</th><th>Ações</th></tr></thead>
         <tbody id="usersBody"></tbody>
       </table>
     </div>
