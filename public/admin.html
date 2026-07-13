@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Admin · Zoeira Market</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+  <div class="topbar">
+    <div class="brand">ZOEIRA<span class="dot">.</span>MARKET</div>
+    <nav>
+      <a href="/index.html">Ver mercados</a>
+      <a href="/profile.html">Perfil</a>
+    </nav>
+    <div style="display:flex; align-items:center; gap:10px;">
+      <div class="credits-pill">💰 <span class="amount" id="creditsAmount">--</span></div>
+      <button class="btn-ghost" onclick="logout()">Sair</button>
+    </div>
+  </div>
+
+  <main>
+    <div class="page-head">
+      <h1>Painel admin</h1>
+      <p>Cria mercados, resolve apostas e cuida dos créditos da galera.</p>
+    </div>
+
+    <div class="panel">
+      <h2>Novo mercado</h2>
+      <form id="newMarketForm" class="grid-2">
+        <div class="field" style="grid-column: 1 / -1;">
+          <label>Pergunta</label>
+          <input id="mQuestion" required placeholder="Ex: O Zé vai chegar atrasado na festa de novo?" />
+        </div>
+        <div class="field" style="grid-column: 1 / -1;">
+          <label>Descrição (opcional)</label>
+          <input id="mDescription" placeholder="Regras, prazo pra resolver, etc." />
+        </div>
+        <div class="field">
+          <label>Odd Sim</label>
+          <input id="mOddsYes" type="number" step="0.01" min="1.01" value="2.00" required />
+        </div>
+        <div class="field">
+          <label>Odd Não</label>
+          <input id="mOddsNo" type="number" step="0.01" min="1.01" value="1.80" required />
+        </div>
+
+        <div style="grid-column: 1 / -1; border-top: 1px dashed var(--line); margin: 6px 0 4px; padding-top: 14px;">
+          <p style="color: var(--text-muted); font-size: 13px; margin: 0 0 12px;">
+            Agendamento (opcional) — dá pra deixar a aposta já pronta com prazo pra fechar e o
+            resultado revelado sozinho depois, criando aquele climão de correr contra o tempo.
+          </p>
+        </div>
+        <div class="field">
+          <label>Fecha para apostas em</label>
+          <input id="mClosesAt" type="datetime-local" />
+        </div>
+        <div class="field">
+          <label>Resultado revelado em</label>
+          <input id="mRevealAt" type="datetime-local" />
+        </div>
+        <div class="field" style="grid-column: 1 / -1;">
+          <label>Resultado pré-definido (fica em segredo até a hora da revelação)</label>
+          <select id="mScheduledOutcome">
+            <option value="">Não definir agora — eu resolvo manualmente depois</option>
+            <option value="yes">Sim</option>
+            <option value="no">Não</option>
+          </select>
+        </div>
+
+        <div style="grid-column: 1 / -1;">
+          <button class="btn-primary" type="submit">Criar mercado</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="panel">
+      <h2>Mercados</h2>
+      <table>
+        <thead>
+          <tr><th>Pergunta</th><th>Odds</th><th>Status</th><th>Agenda</th><th>Resultado</th><th>Ações</th></tr>
+        </thead>
+        <tbody id="marketsBody"></tbody>
+      </table>
+    </div>
+
+    <div class="panel">
+      <h2>Gerenciamento de Senhas</h2>
+      <form id="changeUserPasswordForm" style="display:grid; grid-template-columns: 2fr 1fr; gap:12px; align-items:flex-end;">
+        <div class="field" style="margin:0;">
+          <label>Alterar senha de qual usuário?</label>
+          <input id="pwChangeUsername" type="text" placeholder="Nome do usuário" />
+        </div>
+        <button class="btn-primary" type="submit" style="padding:11px 16px;">Buscar & Alterar</button>
+      </form>
+      <div id="pwChangeResult" style="margin-top:16px;"></div>
+    </div>
+      <form id="newUserForm" class="inline-form">
+        <input id="uUsername" placeholder="usuário" required />
+        <input id="uPassword" type="password" placeholder="senha" required />
+        <input id="uCredits" type="number" placeholder="créditos iniciais" value="100" />
+        <label style="display:flex; align-items:center; gap:6px; font-size:13px; color: var(--text-muted);">
+          <input id="uIsAdmin" type="checkbox" style="width:auto;" /> admin
+        </label>
+        <button class="btn-primary" type="submit">Criar</button>
+      </form>
+    </div>
+
+    <div class="panel">
+      <h2>Usuários</h2>
+      <table>
+        <thead><tr><th>Usuário</th><th>Créditos</th><th>Tipo</th><th>Status</th><th>Ações</th></tr></thead>
+        <tbody id="usersBody"></tbody>
+      </table>
+    </div>
+  </main>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/session-timeout.js"></script>
+  <script src="/js/admin.js"></script>
+</body>
+</html>

@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Entrar · Zoeira Market</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+  <div class="auth-wrap">
+    <div class="auth-card">
+      <h1 id="formTitle">Bem-vindo de volta</h1>
+      <p class="sub" id="formSub">Entra pra ver os mercados e fazer suas fichas.</p>
+
+      <div id="msgBox"></div>
+
+      <form id="authForm">
+        <div class="field">
+          <label for="username">Usuário</label>
+          <input id="username" name="username" autocomplete="username" required />
+        </div>
+        <div class="field">
+          <label for="password">Senha</label>
+          <input id="password" type="password" name="password" autocomplete="current-password" required />
+        </div>
+        <button class="btn-primary btn-block" type="submit" id="submitBtn">Entrar</button>
+      </form>
+
+      <div class="auth-switch">
+        <span id="switchText">Não tem conta ainda?</span>
+        <button id="switchBtn" type="button">Criar conta</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/api.js"></script>
+  <script>
+    let mode = 'login';
+    const form = document.getElementById('authForm');
+    const title = document.getElementById('formTitle');
+    const sub = document.getElementById('formSub');
+    const submitBtn = document.getElementById('submitBtn');
+    const switchText = document.getElementById('switchText');
+    const switchBtn = document.getElementById('switchBtn');
+    const msgBox = document.getElementById('msgBox');
+
+    if (Api.getToken()) location.href = '/index.html';
+
+    switchBtn.addEventListener('click', () => {
+      mode = mode === 'login' ? 'register' : 'login';
+      msgBox.innerHTML = '';
+      if (mode === 'register') {
+        title.textContent = 'Criar sua conta';
+        sub.textContent = 'Cadastra aí e já cai com 1000 créditos pra apostar.';
+        submitBtn.textContent = 'Criar conta';
+        switchText.textContent = 'Já tem conta?';
+        switchBtn.textContent = 'Entrar';
+      } else {
+        title.textContent = 'Bem-vindo de volta';
+        sub.textContent = 'Entra pra ver os mercados e fazer suas fichas.';
+        submitBtn.textContent = 'Entrar';
+        switchText.textContent = 'Não tem conta ainda?';
+        switchBtn.textContent = 'Criar conta';
+      }
+    });
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      msgBox.innerHTML = '';
+      const username = document.getElementById('username').value.trim();
+      const password = document.getElementById('password').value;
+
+      submitBtn.disabled = true;
+      try {
+        const path = mode === 'login' ? '/auth/login' : '/auth/register';
+        const data = await Api.post(path, { username, password });
+        Api.setSession(data.token, data.user);
+        location.href = '/index.html';
+      } catch (err) {
+        msgBox.innerHTML = `<div class="error-msg">${err.message}</div>`;
+      } finally {
+        submitBtn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>
