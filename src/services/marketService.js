@@ -218,13 +218,22 @@ class MarketService {
       // commit, sem re-consultar (Pitfall 4).
       const refundList = [];
       for (const wager of pendingWagers) {
+        // Reembolsa só a fração AINDA presa na aposta (amount - cashed_out_amount)
+        // — mesma classe de bug de RESEARCH.md Pitfall 2 (já corrigida em
+        // resolveMarket, ver 02-REVIEW.md CR-03): um cashout parcial prévio já
+        // devolveu parte do valor ao usuário, então reembolsar o wager.amount
+        // integral aqui seria um pagamento duplicado sobre a mesma stake.
+        // Quando cashed_out_amount = 0 (padrão), remainingStake é idêntico ao
+        // wager.amount original (garantia de regressão).
+        const remainingStake = Number(wager.amount) - Number(wager.cashed_out_amount);
+
         const wallet = await walletRepository.findByUserIdForUpdate(wager.user_id, client);
         const balanceBefore = wallet.balance;
-        const updated = await walletRepository.adjustBalance(wallet.id, wager.amount, client);
+        const updated = await walletRepository.adjustBalance(wallet.id, remainingStake, client);
         await walletRepository.recordTransaction({
           walletId: wallet.id,
           type: 'refund',
-          amount: wager.amount,
+          amount: remainingStake,
           balanceBefore,
           balanceAfter: updated.balance,
           relatedEntity: 'market_deleted',
@@ -232,7 +241,7 @@ class MarketService {
           description: `Reembolso da aposta #${wager.id} (mercado #${market.id} deletado)`,
         }, client);
 
-        refundList.push({ userId: wager.user_id, wagerId: wager.id, amount: Number(wager.amount) });
+        refundList.push({ userId: wager.user_id, wagerId: wager.id, amount: remainingStake });
       }
 
       // Só remove as apostas pendentes recém-reembolsadas — nunca linhas
