@@ -17,8 +17,8 @@ Requirements for this milestone. Each maps to a roadmap phase. Build order: NOTI
 - [ ] **NOTIF-06**: User can list their notifications paginated, newest first
 - [ ] **NOTIF-07**: User can mark a notification as read; unread/read state persists
 - [ ] **NOTIF-08**: Every notification has a timestamp and is retrievable only by its owning user (no IDOR — ownership filter on every query, including by-ID lookups)
-- [ ] **NOTIF-09**: Notification-writing is triggered from a single chokepoint (e.g. a domain-event/notify() call) reused by every feature that emits notifications, not duplicated per call site
-- [ ] **NOTIF-10**: No push transport (WebSocket/SSE) required this milestone — structure only, but the design must not require a rewrite when real-time delivery is added later
+- [x] **NOTIF-09**: Notification-writing is triggered from a single chokepoint (e.g. a domain-event/notify() call) reused by every feature that emits notifications, not duplicated per call site
+- [x] **NOTIF-10**: No push transport (WebSocket/SSE) required this milestone — structure only, but the design must not require a rewrite when real-time delivery is added later
 
 ### Partial Cashout (CASHOUT)
 
@@ -93,8 +93,8 @@ Deferred to future release. Tracked but not in current roadmap.
 | NOTIF-06 | Phase 1 | Pending |
 | NOTIF-07 | Phase 1 | Pending |
 | NOTIF-08 | Phase 1 | Pending |
-| NOTIF-09 | Phase 1 | Pending |
-| NOTIF-10 | Phase 1 | Pending |
+| NOTIF-09 | Phase 1 | Complete |
+| NOTIF-10 | Phase 1 | Complete |
 | CASHOUT-01 | Phase 2 | Pending |
 | CASHOUT-02 | Phase 2 | Pending |
 | CASHOUT-03 | Phase 2 | Pending |
@@ -123,6 +123,7 @@ Deferred to future release. Tracked but not in current roadmap.
 | CANCEL-08 | Phase 4 | Pending |
 
 **Coverage:**
+
 - v1 requirements: 36 total
 - Mapped to phases: 36
 - Unmapped: 0
