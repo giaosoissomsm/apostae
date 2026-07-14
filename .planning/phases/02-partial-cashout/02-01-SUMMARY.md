@@ -152,3 +152,15 @@ None - no external service configuration required. (`CASHOUT_FEE_PERCENT` defaul
 ---
 *Phase: 02-partial-cashout*
 *Completed: 2026-07-14*
+
+## Self-Check: PASSED
+
+- FOUND: src/utils/money.js
+- FOUND: tests/money.test.js
+- FOUND: src/migrations/004_cashout.js
+- FOUND: .planning/phases/02-partial-cashout/02-01-SUMMARY.md
+- FOUND: 1dead54 (test commit)
+- FOUND: a94d6f5 (feat commit)
+- FOUND: fc782f1 (feat commit)
+- FOUND: 5421d5f (feat commit)
+- FOUND: e467ee3 (docs commit)
