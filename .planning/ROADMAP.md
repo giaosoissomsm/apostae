@@ -74,7 +74,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   4. Two concurrent cashout requests, or a retried request with the same idempotency key, on the same wager can never both succeed — verified by a concurrency test that fires simultaneous requests (CASHOUT-06, CASHOUT-07)
   5. Every cashout produces a wallet transaction record and an audit log entry, uses shared decimal-safe money math (no float rounding drift across repeated cashouts), and works identically regardless of market type (CASHOUT-08, CASHOUT-09, CASHOUT-10)
 
-**Plans**: 1/7 plans executed
+**Plans**: 2/7 plans executed
 
 **Wave 1**
 
@@ -82,7 +82,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 02-02-PLAN.md — Data access: cashoutRepository (idempotent create/read) + findByIdForUpdate lock helpers on wager/market repositories
+- [x] 02-02-PLAN.md — Data access: cashoutRepository (idempotent create/read) + findByIdForUpdate lock helpers on wager/market repositories
 - [ ] 02-03-PLAN.md — resolveMarket payout fix: scale win payout by remaining (post-cashout) stake fraction + regression/scaled-payout tests
 
 **Wave 3** *(blocked on Wave 2 completion)*
@@ -136,7 +136,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Notifications Infrastructure | 4/4 | Complete   | 2026-07-14 |
-| 2. Partial Cashout | 1/7 | In Progress|  |
+| 2. Partial Cashout | 2/7 | In Progress|  |
 | 3. New Market Types | 0/TBD | Not started | - |
 | 4. Bet Cancellation v2 | 0/TBD | Not started | - |
 </content>
