@@ -198,6 +198,9 @@ class MarketService {
       const marketResult = await client.query('SELECT * FROM markets WHERE id = $1 FOR UPDATE;', [marketId]);
       const market = marketResult.rows[0];
       if (!market) throw new NotFoundError('Mercado não encontrado.');
+      if (market.status === 'resolved') {
+        throw new ConflictError('Não é possível deletar um mercado já resolvido.');
+      }
 
       const pendingWagers = await wagerRepository.findPendingByMarket(marketId, client);
       // Coletado aqui (dados já lidos na transação) pra emitir depois do
@@ -221,7 +224,9 @@ class MarketService {
         refundList.push({ userId: wager.user_id, wagerId: wager.id, amount: Number(wager.amount) });
       }
 
-      await client.query('DELETE FROM wagers WHERE market_id = $1;', [marketId]);
+      // Só remove as apostas pendentes recém-reembolsadas — nunca linhas
+      // históricas won/lost/refunded/voided (trilha de auditoria; CR-01).
+      await client.query("DELETE FROM wagers WHERE market_id = $1 AND status = 'pending';", [marketId]);
       await marketRepository.delete(marketId, client);
 
       logger.info(`Mercado #${marketId} deletado (${pendingWagers.length} apostas pendentes reembolsadas)`);
