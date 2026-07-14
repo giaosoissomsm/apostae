@@ -48,4 +48,18 @@ for (const key of required) {
   }
 }
 
+// CASHOUT_FEE_PERCENT precisa estar em [0, 100] em QUALQUER ambiente (não só
+// produção): money.applyFeePercent computa fee = gross * (feePercent / 100)
+// sem clamp, então um valor acima de 100 (ex.: operador digitando 500 em vez
+// de 5) faz `fee > gross`, e `net = gross - fee` fica NEGATIVO — cashoutWager
+// então credita a carteira com esse valor negativo, transformando
+// silenciosamente um "cashout" (que deveria creditar) num débito. Um valor
+// não-numérico (parseFloat retornando NaN) é igualmente perigoso e também é
+// rejeitado aqui.
+if (!Number.isFinite(env.CASHOUT_FEE_PERCENT) || env.CASHOUT_FEE_PERCENT < 0 || env.CASHOUT_FEE_PERCENT > 100) {
+  throw new Error(
+    `Invalid CASHOUT_FEE_PERCENT: "${process.env.CASHOUT_FEE_PERCENT}" — must be a number between 0 and 100.`
+  );
+}
+
 module.exports = env;
