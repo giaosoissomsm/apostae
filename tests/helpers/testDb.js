@@ -54,6 +54,46 @@ async function truncateNotifications() {
 }
 
 /**
+ * Aplica a migration 001 (schema base: users, roles, markets, wagers, etc.).
+ * `notifications.user_id` referencia `users(id)`, então os testes de
+ * notificações precisam dessa tabela existir antes de inserir qualquer
+ * linha. Todas as instruções usam CREATE TABLE IF NOT EXISTS, então rodar
+ * isso mais de uma vez (ex.: um beforeAll por arquivo de teste) é seguro.
+ */
+async function applyBaseSchema() {
+  assertTestDatabase();
+  const initialMigration = require('../../src/migrations/001_initial');
+  for (const sql of initialMigration.up) {
+    await query(sql);
+  }
+}
+
+/**
+ * Garante um usuário de teste (idempotente via ON CONFLICT) e retorna o id.
+ * Necessário porque `notifications.user_id` tem FK NOT NULL pra users(id).
+ */
+async function seedTestUser(username) {
+  assertTestDatabase();
+  const result = await query(
+    `INSERT INTO users (username, password_hash)
+     VALUES ($1, 'test-hash-not-a-real-password')
+     ON CONFLICT (username) DO UPDATE SET username = EXCLUDED.username
+     RETURNING id;`,
+    [username]
+  );
+  return result.rows[0].id;
+}
+
+/**
+ * Espera `ms` milissegundos. Usado pra dar tempo dos listeners assíncronos
+ * de domainEvents (disparados via EventEmitter.emit, que NÃO espera
+ * promises) terminarem antes de consultar o resultado no banco.
+ */
+function wait(ms = 50) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
  * Encerra o pool de conexões Postgres — chamar em afterAll para permitir
  * que o processo Jest finalize sem handles abertos.
  */
@@ -64,6 +104,9 @@ async function closePool() {
 module.exports = {
   assertTestDatabase,
   applyNotificationsMigration,
+  applyBaseSchema,
+  seedTestUser,
   truncateNotifications,
+  wait,
   closePool,
 };
