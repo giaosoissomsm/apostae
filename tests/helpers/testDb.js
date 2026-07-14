@@ -116,6 +116,73 @@ async function seedWallet(userId, balance = 1000) {
 }
 
 /**
+ * Aplica a migration 004 (wager_cashouts + wagers.cashed_out_amount) no
+ * banco de teste. Mesmo formato de applyNotificationsMigration/
+ * applyWalletSchema: carregada sob demanda, roda cada string SQL do array
+ * `up` sequencialmente, idempotente (CREATE TABLE IF NOT EXISTS / ADD
+ * COLUMN IF NOT EXISTS).
+ */
+async function applyCashoutMigration() {
+  assertTestDatabase();
+  const cashoutMigration = require('../../src/migrations/004_cashout');
+  for (const sql of cashoutMigration.up) {
+    await query(sql);
+  }
+}
+
+/**
+ * Insere um mercado aberto ('open') de teste e retorna o id. Reaproveita as
+ * mesmas colunas que marketRepository.create grava (question, description,
+ * odds_yes, odds_no, status, closes_at, reveal_at, scheduled_outcome,
+ * created_by) — created_by exige um usuário existente (FK NOT NULL), então
+ * o chamador deve passar um userId de um seedTestUser() anterior.
+ */
+async function seedOpenMarket({
+  createdBy,
+  question = 'Mercado de teste?',
+  description = '',
+  oddsYes = 2.0,
+  oddsNo = 2.0,
+  closesAt = null,
+  revealAt = null,
+  scheduledOutcome = null,
+} = {}) {
+  assertTestDatabase();
+  const result = await query(
+    `INSERT INTO markets (question, description, odds_yes, odds_no, status, closes_at, reveal_at, scheduled_outcome, created_by)
+     VALUES ($1, $2, $3, $4, 'open', $5, $6, $7, $8)
+     RETURNING id;`,
+    [question, description, oddsYes, oddsNo, closesAt, revealAt, scheduledOutcome, createdBy]
+  );
+  return result.rows[0].id;
+}
+
+/**
+ * Insere uma aposta pendente ('pending') de teste e retorna o id. Aceita
+ * `cashedOutAmount` (default 0) pra permitir que o teste de integração de
+ * resolução (Plan 04) semeie uma aposta com cashout prévio SEM depender do
+ * caminho de escrita de cashout em si (que só existe a partir do Plan 02).
+ */
+async function seedWager({
+  userId,
+  marketId,
+  choice = 'yes',
+  amount = 100,
+  oddsAtTime = 2.0,
+  potentialPayout = 200,
+  cashedOutAmount = 0,
+}) {
+  assertTestDatabase();
+  const result = await query(
+    `INSERT INTO wagers (user_id, market_id, choice, amount, odds_at_time, potential_payout, status, cashed_out_amount)
+     VALUES ($1, $2, $3, $4, $5, $6, 'pending', $7)
+     RETURNING id;`,
+    [userId, marketId, choice, amount, oddsAtTime, potentialPayout, cashedOutAmount]
+  );
+  return result.rows[0].id;
+}
+
+/**
  * Espera `ms` milissegundos. Usado pra dar tempo dos listeners assíncronos
  * de domainEvents (disparados via EventEmitter.emit, que NÃO espera
  * promises) terminarem antes de consultar o resultado no banco.
@@ -137,8 +204,11 @@ module.exports = {
   applyNotificationsMigration,
   applyBaseSchema,
   applyWalletSchema,
+  applyCashoutMigration,
   seedTestUser,
   seedWallet,
+  seedOpenMarket,
+  seedWager,
   truncateNotifications,
   wait,
   closePool,
