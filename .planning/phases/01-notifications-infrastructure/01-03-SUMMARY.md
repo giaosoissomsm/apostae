@@ -151,3 +151,7 @@ no pg_hba.conf entry for host "172.16.60.3", user "apostae", database "apostae_t
 ---
 *Phase: 01-notifications-infrastructure*
 *Completed: 2026-07-14*
+
+## Self-Check: PASSED
+
+All 6 files found on disk (notificationsController.js, routes/notifications.js, all 3 filled test files, this SUMMARY). All 3 commits (`b650dca`, `27c4d10`, `33137dc`) found in git log.
