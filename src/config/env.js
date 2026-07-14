@@ -22,8 +22,20 @@ const env = {
   
   // Security
   BCRYPT_ROUNDS: parseInt(process.env.BCRYPT_ROUNDS || '10', 10),
-  SESSION_TIMEOUT: parseInt(process.env.SESSION_TIMEOUT || '1800000', 10), // 30 min
-  
+  // Tempo de inatividade até o logout automático. Única fonte de verdade:
+  // o frontend não hardcoda esse valor, ele lê o TTL real via GET /api/sessions/current.
+  // Para mudar o tempo de inatividade no futuro, altere apenas esta env var.
+  SESSION_TIMEOUT: parseInt(process.env.SESSION_TIMEOUT || '1800000', 10), // 30 min de inatividade
+  SESSION_ABSOLUTE_TIMEOUT: parseInt(process.env.SESSION_ABSOLUTE_TIMEOUT || '1800000', 10), // 30 min máximo desde o login, mesmo com atividade contínua (defesa contra sequestro de sessão)
+
+  // Cashout parcial (Fase 2). Taxa percentual aplicada sobre o valor bruto do
+  // cashout — 0% nesta milestone (BR-1, confirmado pelo dono do projeto); o
+  // termo de taxa fica presente na fórmula (src/utils/money.js) pra uma
+  // milestone futura poder ligar uma taxa não-zero sem reescrever o cálculo.
+  // Não existe CASHOUT_MIN_AMOUNT: BR-2 não exige um piso além da checagem
+  // de valor positivo já aplicada no serviço.
+  CASHOUT_FEE_PERCENT: parseFloat(process.env.CASHOUT_FEE_PERCENT || '0'),
+
   // Logging
   LOG_LEVEL: process.env.LOG_LEVEL || 'info',
 };
