@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 01
 current_phase_name: notifications-infrastructure
 status: executing
-stopped_at: Completed 01-01-PLAN.md
-last_updated: "2026-07-14T12:14:50.398Z"
+stopped_at: Completed 01-02-PLAN.md
+last_updated: "2026-07-14T12:25:52.634Z"
 last_activity: 2026-07-14
 last_activity_desc: Phase 01 execution started
 progress:
   total_phases: 4
   completed_phases: 0
   total_plans: 4
-  completed_plans: 1
+  completed_plans: 2
   percent: 0
 ---
 
@@ -32,7 +32,7 @@ transactions, even under concurrent access.
 ## Current Position
 
 Phase: 01 (notifications-infrastructure) — EXECUTING
-Plan: 2 of 4
+Plan: 3 of 4
 Status: Ready to execute
 Last activity: 2026-07-14 — Phase 01 execution started
 
@@ -59,6 +59,7 @@ Progress: [░░░░░░░░░░] 0%
 
 *Updated after each plan completion*
 | Phase 01 P01 | 10min | 3 tasks | 10 files |
+| Phase 01 P02 | 35min | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -80,6 +81,8 @@ Recent decisions affecting current work:
 
 - Phase 1 P01: Jest devDependency install approved via blocking human-verify checkpoint (T-01-SC); devDependency only, no runtime deps added
 - Phase 1 P01: tests/helpers/testDb.js lazy-requires migration 003 inside applyNotificationsMigration() rather than at module top-level, so the helper parses cleanly before the migration file exists
+- Phase 1 P02: Extended tests/helpers/testDb.js with applyBaseSchema()/seedTestUser()/wait() (beyond plan's files_modified) — needed to satisfy notifications.user_id's FK to users(id) so the plan's real test assertions can insert valid rows.
+- Phase 1 P02: notificationService.js runtime behavior (7 event listeners, idempotency, ownership scoping, markRead semantics) verified via a temporary mock-backed jest dry run, deleted before commit, since no live Postgres test database is reachable from this sandbox (pg_hba/proxy allows only the 'apostae' db).
 
 ### Pending Todos
 
@@ -100,6 +103,8 @@ None yet.
   mandating concurrency/attack-vector testing — must be resolved before Phase 2's concurrency
   tests can be written.
 
+- No live Postgres test database is reachable from this environment for any *test*-named DB (only 'apostae' — the dev/prod db — connects; pg_hba.conf/proxy on the DB host rejects even 'postgres' and a freshly-CREATE-DATABASE'd 'apostae_test'). tests/notifications.events.test.js and tests/notifications.idempotency.test.js (Plan 02) are written and correct per source/mock-backed review but could not be run against real Postgres. Must be resolved (DB host pg_hba/proxy allowlist, or a separate local test Postgres) before Plan 03/04's own integration tests — and this plan's own tests — can get a real pass/fail signal.
+
 ## Deferred Items
 
 Items acknowledged and carried forward from previous milestone close:
@@ -110,7 +115,7 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-07-14T12:14:50.386Z
-Stopped at: Completed 01-01-PLAN.md
+Last session: 2026-07-14T12:25:52.622Z
+Stopped at: Completed 01-02-PLAN.md
 Resume file: None
 </content>

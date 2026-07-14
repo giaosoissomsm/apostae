@@ -46,14 +46,14 @@ Decimal phases appear between their surrounding integers in numeric order.
   4. Every notification endpoint (list, get-by-id, mark-read) is scoped to the requesting user — a user can never read or mutate another user's notification, including by guessing IDs (NOTIF-08)
   5. All notification writes flow through a single shared chokepoint (e.g. a `domainEvents`/`notify()` call), not duplicated per call site, so later phases (cashout-available, etc.) integrate without rework and no push transport is required this milestone (NOTIF-09, NOTIF-10)
 
-**Plans**: 1/4 plans executed
+**Plans**: 2/4 plans executed
 **Wave 1**
 
 - [x] 01-01-PLAN.md — Foundation: Jest harness + test-DB fixture, notifications migration (idempotency constraint + indexes), domainEvents bus singleton
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 01-02-PLAN.md — Notification data + sole-writer chokepoint: repository (user_id-scoped) + service (idempotent notify, 7-event catalog, read methods)
+- [x] 01-02-PLAN.md — Notification data + sole-writer chokepoint: repository (user_id-scoped) + service (idempotent notify, 7-event catalog, read methods)
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
@@ -116,7 +116,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Notifications Infrastructure | 1/4 | In Progress|  |
+| 1. Notifications Infrastructure | 2/4 | In Progress|  |
 | 2. Partial Cashout | 0/TBD | Not started | - |
 | 3. New Market Types | 0/TBD | Not started | - |
 | 4. Bet Cancellation v2 | 0/TBD | Not started | - |

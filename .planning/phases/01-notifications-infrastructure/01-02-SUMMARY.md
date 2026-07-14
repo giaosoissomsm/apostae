@@ -157,3 +157,7 @@ Given this, running `npx jest tests/notifications.idempotency.test.js tests/noti
 ---
 *Phase: 01-notifications-infrastructure*
 *Completed: 2026-07-14*
+
+## Self-Check: PASSED
+
+All 6 files found on disk (notificationRepository.js, notificationService.js, both test files, testDb.js, this SUMMARY). All 3 commits (`fa429e9`, `6d39d45`, `db3ae37`) found in git log.

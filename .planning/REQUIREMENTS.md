@@ -9,14 +9,14 @@ Requirements for this milestone. Each maps to a roadmap phase. Build order: NOTI
 
 ### Notifications (NOTIF)
 
-- [ ] **NOTIF-01**: User is notified when a market they have a wager in is closed
-- [ ] **NOTIF-02**: User is notified when a market's official result is defined (resolved)
-- [ ] **NOTIF-03**: User is notified when their wager wins
-- [ ] **NOTIF-04**: User is notified when their wager loses
-- [ ] **NOTIF-05**: User is notified on any other relevant wager status change (e.g. cancelled)
+- [x] **NOTIF-01**: User is notified when a market they have a wager in is closed
+- [x] **NOTIF-02**: User is notified when a market's official result is defined (resolved)
+- [x] **NOTIF-03**: User is notified when their wager wins
+- [x] **NOTIF-04**: User is notified when their wager loses
+- [x] **NOTIF-05**: User is notified on any other relevant wager status change (e.g. cancelled)
 - [ ] **NOTIF-06**: User can list their notifications paginated, newest first
 - [ ] **NOTIF-07**: User can mark a notification as read; unread/read state persists
-- [ ] **NOTIF-08**: Every notification has a timestamp and is retrievable only by its owning user (no IDOR — ownership filter on every query, including by-ID lookups)
+- [x] **NOTIF-08**: Every notification has a timestamp and is retrievable only by its owning user (no IDOR — ownership filter on every query, including by-ID lookups)
 - [x] **NOTIF-09**: Notification-writing is triggered from a single chokepoint (e.g. a domain-event/notify() call) reused by every feature that emits notifications, not duplicated per call site
 - [x] **NOTIF-10**: No push transport (WebSocket/SSE) required this milestone — structure only, but the design must not require a rewrite when real-time delivery is added later
 
@@ -85,14 +85,14 @@ Deferred to future release. Tracked but not in current roadmap.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| NOTIF-01 | Phase 1 | Pending |
-| NOTIF-02 | Phase 1 | Pending |
-| NOTIF-03 | Phase 1 | Pending |
-| NOTIF-04 | Phase 1 | Pending |
-| NOTIF-05 | Phase 1 | Pending |
+| NOTIF-01 | Phase 1 | Complete |
+| NOTIF-02 | Phase 1 | Complete |
+| NOTIF-03 | Phase 1 | Complete |
+| NOTIF-04 | Phase 1 | Complete |
+| NOTIF-05 | Phase 1 | Complete |
 | NOTIF-06 | Phase 1 | Pending |
 | NOTIF-07 | Phase 1 | Pending |
-| NOTIF-08 | Phase 1 | Pending |
+| NOTIF-08 | Phase 1 | Complete |
 | NOTIF-09 | Phase 1 | Complete |
 | NOTIF-10 | Phase 1 | Complete |
 | CASHOUT-01 | Phase 2 | Pending |
