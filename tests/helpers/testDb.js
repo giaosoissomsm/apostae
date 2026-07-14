@@ -85,6 +85,37 @@ async function seedTestUser(username) {
 }
 
 /**
+ * Aplica a migration 002 (schema de carteira: wallets, wallet_transactions).
+ * `wagerService.placeWager`/`cancelWager` e `marketService.resolveMarket`/
+ * `deleteMarket` leem/gravam na carteira dentro da própria transação
+ * financeira, então os testes de emissão de eventos (Plan 04) precisam
+ * dessas tabelas existirem. Idempotente (CREATE TABLE IF NOT EXISTS).
+ */
+async function applyWalletSchema() {
+  assertTestDatabase();
+  const walletMigration = require('../../src/migrations/002_wallet');
+  for (const sql of walletMigration.up) {
+    await query(sql);
+  }
+}
+
+/**
+ * Garante uma carteira de teste pro usuário informado (idempotente via
+ * ON CONFLICT), com o saldo dado, e retorna o id da carteira.
+ */
+async function seedWallet(userId, balance = 1000) {
+  assertTestDatabase();
+  const result = await query(
+    `INSERT INTO wallets (user_id, balance)
+     VALUES ($1, $2)
+     ON CONFLICT (user_id) DO UPDATE SET balance = EXCLUDED.balance
+     RETURNING id;`,
+    [userId, balance]
+  );
+  return result.rows[0].id;
+}
+
+/**
  * Espera `ms` milissegundos. Usado pra dar tempo dos listeners assíncronos
  * de domainEvents (disparados via EventEmitter.emit, que NÃO espera
  * promises) terminarem antes de consultar o resultado no banco.
@@ -105,7 +136,9 @@ module.exports = {
   assertTestDatabase,
   applyNotificationsMigration,
   applyBaseSchema,
+  applyWalletSchema,
   seedTestUser,
+  seedWallet,
   truncateNotifications,
   wait,
   closePool,
