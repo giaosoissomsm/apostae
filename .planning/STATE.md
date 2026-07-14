@@ -4,17 +4,17 @@ milestone: v1.0
 milestone_name: milestone
 current_phase: 01
 current_phase_name: notifications-infrastructure
-status: executing
-stopped_at: Completed 01-03-PLAN.md
-last_updated: "2026-07-14T12:48:10.314Z"
+status: verifying
+stopped_at: Completed 01-04-PLAN.md
+last_updated: "2026-07-14T12:59:22.927Z"
 last_activity: 2026-07-14
 last_activity_desc: Phase 01 execution started
 progress:
   total_phases: 4
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 4
-  completed_plans: 3
-  percent: 0
+  completed_plans: 4
+  percent: 25
 ---
 
 # Project State
@@ -33,7 +33,7 @@ transactions, even under concurrent access.
 
 Phase: 01 (notifications-infrastructure) — EXECUTING
 Plan: 4 of 4
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-07-14 — Phase 01 execution started
 
 Progress: [░░░░░░░░░░] 0%
@@ -61,6 +61,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 01 P01 | 10min | 3 tasks | 10 files |
 | Phase 01 P02 | 35min | 2 tasks | 6 files |
 | Phase 01 P03 | 22min | 2 tasks | 6 files |
+| Phase 01 P04 | 25min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -85,6 +86,9 @@ Recent decisions affecting current work:
 - Phase 1 P02: Extended tests/helpers/testDb.js with applyBaseSchema()/seedTestUser()/wait() (beyond plan's files_modified) — needed to satisfy notifications.user_id's FK to users(id) so the plan's real test assertions can insert valid rows.
 - Phase 1 P02: notificationService.js runtime behavior (7 event listeners, idempotency, ownership scoping, markRead semantics) verified via a temporary mock-backed jest dry run, deleted before commit, since no live Postgres test database is reachable from this sandbox (pg_hba/proxy allows only the 'apostae' db).
 - Phase 1 P03: Verified controller/route/server.js wiring and the three filled test files via a temporary mock-backed jest dry run (in-memory SQL emulator matching notificationRepository's exact query shapes) driving the real, unmodified notificationRepository/notificationService — deleted before commit, not part of the deliverable — since no live Postgres test database is reachable in this sandbox (same limitation as Plan 01/02).
+- [Phase ?]: Phase 1 P04: Extended tests/helpers/testDb.js with applyWalletSchema()/seedWallet() (beyond plan's files_modified) - wagerService/marketService's financial transactions read/write the wallets table, so the emission tests need funded test wallets to exercise real placeWager/cancelWager/resolveMarket/deleteMarket.
+- [Phase ?]: Phase 1 P04: resolveMarket/deleteMarket destructure internal-only fields (wagerOutcomes/refunds/question) out of the transaction's return value, emit from that data, but the method's own return still yields the original external shape - verified with an explicit toBeUndefined() assertion so no internal field leaks into the controller's res.json(...) response.
+- [Phase ?]: Phase 1 P04: Verified all 5 emission call sites via two temporary mock-backed jest dry runs (deleted before commit) driving the real wagerService.js/marketService.js against a fake Postgres client, since no live Postgres test database is reachable in this sandbox (same limitation as Plans 01-02/01-03).
 
 ### Pending Todos
 
@@ -117,7 +121,7 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-07-14T12:48:10.303Z
-Stopped at: Completed 01-03-PLAN.md
+Last session: 2026-07-14T12:59:22.915Z
+Stopped at: Completed 01-04-PLAN.md
 Resume file: 
-</content>
+None

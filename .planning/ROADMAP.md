@@ -25,7 +25,7 @@ same lock-then-revalidate, decimal-safe, audit-logged pattern already proven in 
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Notifications Infrastructure** - Users are notified of wager/market status events and can read/manage their notification inbox
+- [x] **Phase 1: Notifications Infrastructure** - Users are notified of wager/market status events and can read/manage their notification inbox (completed 2026-07-14)
 - [ ] **Phase 2: Partial Cashout** - Users can cash out part of an open wager's value pre-resolution, computed and locked safely server-side
 - [ ] **Phase 3: New Market Types** - Admins can create Over/Under and multiple-choice markets alongside existing binary markets
 - [ ] **Phase 4: Bet Cancellation v2** - Users can cancel a pending wager for a 5% fee, replacing the old free/pending-only cancellation
@@ -46,7 +46,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   4. Every notification endpoint (list, get-by-id, mark-read) is scoped to the requesting user — a user can never read or mutate another user's notification, including by guessing IDs (NOTIF-08)
   5. All notification writes flow through a single shared chokepoint (e.g. a `domainEvents`/`notify()` call), not duplicated per call site, so later phases (cashout-available, etc.) integrate without rework and no push transport is required this milestone (NOTIF-09, NOTIF-10)
 
-**Plans**: 3/4 plans executed
+**Plans**: 4/4 plans complete
 **Wave 1**
 
 - [x] 01-01-PLAN.md — Foundation: Jest harness + test-DB fixture, notifications migration (idempotency constraint + indexes), domainEvents bus singleton
@@ -58,7 +58,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Wave 3** *(blocked on Wave 2 completion)*
 
 - [x] 01-03-PLAN.md — Read API: controller + routes (requireAuth, ownership-scoped) + server mount and listener registration
-- [ ] 01-04-PLAN.md — Producer wiring: wager/market services emit the 7 catalog events after transaction commit
+- [x] 01-04-PLAN.md — Producer wiring: wager/market services emit the 7 catalog events after transaction commit
 
 ### Phase 2: Partial Cashout
 
@@ -116,7 +116,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Notifications Infrastructure | 3/4 | In Progress|  |
+| 1. Notifications Infrastructure | 4/4 | Complete   | 2026-07-14 |
 | 2. Partial Cashout | 0/TBD | Not started | - |
 | 3. New Market Types | 0/TBD | Not started | - |
 | 4. Bet Cancellation v2 | 0/TBD | Not started | - |
