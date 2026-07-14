@@ -6,14 +6,14 @@ current_phase: 02
 current_phase_name: partial-cashout
 status: executing
 stopped_at: Completed 02-04-PLAN.md
-last_updated: "2026-07-14T17:47:13.611Z"
+last_updated: "2026-07-14T17:51:08.598Z"
 last_activity: 2026-07-14
 last_activity_desc: Phase 02 execution started
 progress:
   total_phases: 4
   completed_phases: 1
   total_plans: 11
-  completed_plans: 8
+  completed_plans: 9
   percent: 25
 ---
 
@@ -32,7 +32,7 @@ transactions, even under concurrent access.
 ## Current Position
 
 Phase: 02 (partial-cashout) — EXECUTING
-Plan: 5 of 7
+Plan: 6 of 7
 Status: Ready to execute
 Last activity: 2026-07-14 — Phase 02 execution started
 
@@ -66,6 +66,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 02 P02 | 12min | 2 tasks | 3 files |
 | Phase 02 P03 | 8min | 2 tasks | 2 files |
 | Phase 02 P04 | 10min | 2 tasks | 4 files |
+| Phase 02 P05 | 8min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -108,6 +109,7 @@ Recent decisions affecting current work:
 - [Phase ?]: Phase 2 P03: resolution-integration test verified via a temporary mock-backed jest dry run (deleted before commit) since no live test-DB is reachable in this sandbox (carried-forward Phase 1 blocker, reconfirmed with both default and explicit apostae_test DB_NAME overrides).
 - [Phase 02]: Phase 2 P04: cashoutWager's idempotent-replay path reads netValue/grossValue/feeAmount/stakeCashedOut back from the already-committed wager_cashouts row rather than recomputing, guaranteeing byte-identical values on retry. — Idempotency must return the original result, not a freshly recomputed one, in case of any incidental drift between the original and retried request.
 - [Phase 02]: Phase 2 P04: domainEvents.emit('wager.cashed_out', ...) fires unconditionally after transaction() resolves, including on the idempotent-replay branch -- matches the existing emit-is-best-effort/consumer-owns-dedup convention. — Consistent with notificationService's own idempotency handling; avoids adding special-case branching in the service layer.
+- [Phase ?]: Phase 2 P05: relatedId for wager.cashed_out is evt.cashoutId (the wager_cashouts row's own globally-unique id), never evt.wagerId -- a wager can be cashed out more than once, and reusing wagerId would collide with the existing UNIQUE(user_id, type, related_entity, related_id) constraint on the second cashout, silently losing that notification to the pre-existing 23505-catch-as-no-op idempotency logic (RESEARCH.md Pitfall 3).
 
 ### Pending Todos
 
@@ -141,7 +143,7 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-07-14T17:47:13.600Z
+Last session: 2026-07-14T17:50:50.339Z
 Stopped at: Completed 02-04-PLAN.md
 Resume file: 
 None

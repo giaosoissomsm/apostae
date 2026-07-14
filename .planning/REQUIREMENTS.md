@@ -29,7 +29,7 @@ Requirements for this milestone. Each maps to a roadmap phase. Build order: NOTI
 - [x] **CASHOUT-05**: Cashout is only allowed while market.status = 'open' AND wager.status = 'pending'; rejected once market is closed or wager is resolved
 - [x] **CASHOUT-06**: Concurrent cashout requests on the same wager cannot both succeed (row-level locking + re-validation after lock acquisition, reusing the existing `SELECT ... FOR UPDATE` pattern)
 - [x] **CASHOUT-07**: Cashout requests are idempotent (a retried request with the same idempotency key does not double-apply)
-- [ ] **CASHOUT-08**: Every cashout produces a wallet transaction record and an audit log entry; wallet balance is only ever changed via a recorded movement, never a direct update
+- [x] **CASHOUT-08**: Every cashout produces a wallet transaction record and an audit log entry; wallet balance is only ever changed via a recorded movement, never a direct update
 - [x] **CASHOUT-09**: Cashout logic and schema are market-type-agnostic (works against "wager + odds_at_time + market status", not hardcoded to binary Sim/Não) so Phase 3's new market types don't force a rework
 - [x] **CASHOUT-10**: Money math uses a shared decimal-safe utility (no raw float rounding) to prevent drift across repeated partial cashouts
 
@@ -102,7 +102,7 @@ Deferred to future release. Tracked but not in current roadmap.
 | CASHOUT-05 | Phase 2 | Complete |
 | CASHOUT-06 | Phase 2 | Complete |
 | CASHOUT-07 | Phase 2 | Complete |
-| CASHOUT-08 | Phase 2 | Pending |
+| CASHOUT-08 | Phase 2 | Complete |
 | CASHOUT-09 | Phase 2 | Complete |
 | CASHOUT-10 | Phase 2 | Complete |
 | MARKET-01 | Phase 3 | Pending |
