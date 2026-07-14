@@ -17,12 +17,23 @@ const logger = require('./src/utils/logger');
 // Rotas
 const authRoutes = require('./src/routes/auth');
 const usersRoutes = require('./src/routes/users');
+const marketsRoutes = require('./src/routes/markets');
+const wagersRoutes = require('./src/routes/wagers');
+const leaderboardRoutes = require('./src/routes/leaderboard');
+const sessionsRoutes = require('./src/routes/sessions');
+const notificationsRoutes = require('./src/routes/notifications');
 
 // Script de migrações
 const { runPendingMigrations } = require('./scripts/migrate');
+const { startScheduler } = require('./src/scheduler');
 
 // Express app
 const app = express();
+
+// Confia em X-Forwarded-For apenas quando a conexão direta vem do proxy
+// reverso interno (rede 172.16.0.0/12) — req.ip resolve pro IP real do
+// cliente nesse caso, e pro IP de origem cru em qualquer outro caso.
+app.set('trust proxy', '172.16.0.0/12');
 
 // ============================================================================
 // MIDDLEWARES GLOBAIS
@@ -73,6 +84,11 @@ app.get('/health', async (req, res) => {
 
 app.use('/api/auth', authRoutes);
 app.use('/api/users', usersRoutes);
+app.use('/api/markets', marketsRoutes);
+app.use('/api/wagers', wagersRoutes);
+app.use('/api/leaderboard', leaderboardRoutes);
+app.use('/api/sessions', sessionsRoutes);
+app.use('/api/notifications', notificationsRoutes);
 
 // ============================================================================
 // FRONTEND ESTÁTICO
@@ -127,6 +143,14 @@ async function bootstrap() {
     // Inicializa dados padrão (roles, permissões)
     logger.info('⚙️ Inicializando dados padrão...');
     await initializeDefaults();
+
+    // Registra os listeners de notificações ANTES do agendador/qualquer
+    // mutação de aposta/mercado, pra nenhuma emissão de evento de domínio
+    // ocorrer sem um listener já anexado.
+    require('./src/services/notificationService').register();
+
+    // Agendador de mercados (fecha/revela automaticamente por closes_at/reveal_at)
+    startScheduler();
 
     // Inicia servidor HTTP
     const server = app.listen(env.PORT, () => {
