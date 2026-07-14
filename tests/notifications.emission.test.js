@@ -150,4 +150,120 @@ describe('emissão de eventos de domínio a partir de wagerService/marketService
 
     expect(listener.captured).toHaveLength(0);
   });
+
+  test('marketService.closeMarket emite market.closed com os recipients das apostas pendentes', async () => {
+    const market = await createMarket();
+    await wagerService.placeWager(userId, { market_id: market.id, choice: 'yes', amount: 15 });
+
+    const listener = captureEvents('market.closed');
+    const closed = await marketService.closeMarket(market.id);
+    await wait();
+    listener.stop();
+
+    expect(closed.status).toBe('closed');
+    expect(listener.captured).toHaveLength(1);
+    expect(listener.captured[0].payload).toEqual({
+      marketId: market.id,
+      question: market.question,
+      recipients: [userId],
+    });
+  });
+
+  test('marketService.closeMarket não emite nada quando já não está aberto (idempotente)', async () => {
+    const market = await createMarket({ status: 'closed' });
+
+    const listener = captureEvents('market.closed');
+    const result = await marketService.closeMarket(market.id);
+    await wait();
+    listener.stop();
+
+    expect(result.id).toBe(market.id);
+    expect(listener.captured).toHaveLength(0);
+  });
+
+  test('marketService.resolveMarket emite market.resolved + wager.won/wager.lost por aposta pendente, após o commit', async () => {
+    const market = await createMarket({ oddsYes: 2.0, oddsNo: 2.0 });
+    const secondUser = await seedTestUser('emit_user_resolve_2');
+    await seedWallet(secondUser, 1000);
+
+    const winner = await wagerService.placeWager(userId, { market_id: market.id, choice: 'yes', amount: 10 });
+    const loser = await wagerService.placeWager(secondUser, { market_id: market.id, choice: 'no', amount: 10 });
+
+    const listener = captureEvents('market.resolved', 'wager.won', 'wager.lost');
+    const resolved = await marketService.resolveMarket(market.id, 'yes');
+    await wait();
+    listener.stop();
+
+    // Formato de retorno pro controller (res.json(market)) não deve vazar
+    // campos internos usados só pra montar os eventos.
+    expect(resolved.outcome).toBe('yes');
+    expect(resolved.wagerOutcomes).toBeUndefined();
+
+    const resolvedEvt = listener.captured.find((e) => e.name === 'market.resolved');
+    expect(resolvedEvt.payload).toEqual({
+      marketId: market.id,
+      question: market.question,
+      outcome: 'yes',
+      recipients: expect.arrayContaining([userId, secondUser]),
+    });
+    expect(resolvedEvt.payload.recipients).toHaveLength(2);
+
+    const wonEvt = listener.captured.find((e) => e.name === 'wager.won');
+    expect(wonEvt.payload).toEqual({
+      wagerId: winner.id,
+      userId,
+      marketId: market.id,
+      question: market.question,
+      amount: 10,
+      payout: winner.potential_payout,
+    });
+
+    const lostEvt = listener.captured.find((e) => e.name === 'wager.lost');
+    expect(lostEvt.payload).toEqual({
+      wagerId: loser.id,
+      userId: secondUser,
+      marketId: market.id,
+      question: market.question,
+      amount: 10,
+    });
+  });
+
+  test('marketService.resolveMarket não emite nada quando a transação sofre rollback (já resolvido)', async () => {
+    const market = await createMarket();
+    await marketService.resolveMarket(market.id, 'yes');
+
+    const listener = captureEvents('market.resolved', 'wager.won', 'wager.lost');
+    await expect(marketService.resolveMarket(market.id, 'yes')).rejects.toThrow();
+    await wait();
+    listener.stop();
+
+    expect(listener.captured).toHaveLength(0);
+  });
+
+  test('marketService.deleteMarket emite market.deleted com os reembolsos, após o commit', async () => {
+    const market = await createMarket();
+    const wager = await wagerService.placeWager(userId, { market_id: market.id, choice: 'yes', amount: 12 });
+
+    const listener = captureEvents('market.deleted');
+    const result = await marketService.deleteMarket(market.id);
+    await wait();
+    listener.stop();
+
+    expect(result).toEqual({ ok: true, message: 'Mercado deletado.' });
+    expect(listener.captured).toHaveLength(1);
+    expect(listener.captured[0].payload).toEqual({
+      marketId: market.id,
+      question: market.question,
+      refunds: [{ userId, wagerId: wager.id, amount: 12 }],
+    });
+  });
+
+  test('marketService.deleteMarket não emite nada quando a transação sofre rollback (mercado inexistente)', async () => {
+    const listener = captureEvents('market.deleted');
+    await expect(marketService.deleteMarket(999999)).rejects.toThrow();
+    await wait();
+    listener.stop();
+
+    expect(listener.captured).toHaveLength(0);
+  });
 });
