@@ -174,6 +174,16 @@ class WagerService {
       const gross = money.multiply(requestedStake, Number(wager.odds_at_time));
       const { fee, net } = money.applyFeePercent(gross, env.CASHOUT_FEE_PERCENT);
 
+      // SAVEPOINT antes do INSERT especulativo: um 23505 (unique-violation em
+      // wager_cashouts(wager_id, idempotency_key)) deixa a transação inteira
+      // em estado "aborted" no Postgres real até um ROLLBACK explícito — sem
+      // um savepoint aqui, o SELECT de replay logo abaixo falharia com 25P02
+      // ("current transaction is aborted"), e nunca com o 23505 que este
+      // catch espera (ver 02-REVIEW.md CR-01). ROLLBACK TO SAVEPOINT desfaz
+      // só o INSERT que falhou, mantendo o resto da transação (locks de
+      // mercado/aposta) intacto pra ler o resultado já commitado.
+      await client.query('SAVEPOINT cashout_insert');
+
       let cashout;
       let isReplay = false;
       try {
@@ -194,6 +204,7 @@ class WagerService {
           // Mesma (wager_id, idempotency_key) já commitada antes — devolve o
           // resultado já existente, NÃO reaplica o crédito na carteira nem o
           // incremento de cashed_out_amount.
+          await client.query('ROLLBACK TO SAVEPOINT cashout_insert');
           cashout = await cashoutRepository.findByIdempotencyKey(wagerId, idempotencyKey, client);
           isReplay = true;
         } else {
