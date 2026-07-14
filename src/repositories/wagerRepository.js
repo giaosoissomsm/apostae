@@ -53,6 +53,17 @@ class WagerRepository {
     return result.rows[0] || null;
   }
 
+  // Incrementa o total já sacado via cashout parcial (soma cumulativa, nunca
+  // sobrescreve) — usado por wagerService.cashoutWager depois que o cashout
+  // já foi persistido de forma idempotente (ver cashoutRepository.create).
+  async incrementCashedOutAmount(id, stake, client) {
+    const result = await client.query(
+      'UPDATE wagers SET cashed_out_amount = cashed_out_amount + $1 WHERE id = $2 RETURNING *;',
+      [stake, id]
+    );
+    return result.rows[0] || null;
+  }
+
   async findByUserId(userId) {
     const result = await query(`${SELECT_WITH_MARKET} WHERE w.user_id = $1 ORDER BY w.created_at DESC;`, [userId]);
     return result.rows;

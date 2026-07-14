@@ -2,6 +2,10 @@ const { transaction } = require('../config/database');
 const wagerRepository = require('../repositories/wagerRepository');
 const walletRepository = require('../repositories/walletRepository');
 const userRepository = require('../repositories/userRepository');
+const marketRepository = require('../repositories/marketRepository');
+const cashoutRepository = require('../repositories/cashoutRepository');
+const money = require('../utils/money');
+const env = require('../config/env');
 const domainEvents = require('../events/domainEvents');
 const { ValidationError, NotFoundError, ConflictError, AuthorizationError } = require('../utils/errors');
 const logger = require('../utils/logger');
@@ -121,6 +125,142 @@ class WagerService {
 
     logger.info(`Usuário ${userId} cancelou a aposta #${wagerId}`);
     return { ok: true };
+  }
+
+  // Executa um cashout parcial da PRÓPRIA aposta. Valor sempre calculado no
+  // servidor (stake * odds_at_time, menos taxa) — nunca lido do body do
+  // cliente. Ordem de lock fixa: mercado -> aposta -> carteira (igual
+  // placeWager/resolveMarket/deleteMarket, NUNCA a ordem oposta de
+  // cancelWager — ver 02-RESEARCH.md Pitfall 1). Idempotente via
+  // UNIQUE(wager_id, idempotency_key): uma retentativa com a mesma chave
+  // nunca reaplica o crédito na carteira nem o incremento de
+  // cashed_out_amount (CASHOUT-07).
+  async cashoutWager(wagerId, userId, { amount, idempotencyKey }) {
+    const requestedStake = Number(amount);
+    if (!Number.isFinite(requestedStake) || requestedStake <= 0) {
+      throw new ValidationError('Valor do cashout precisa ser maior que zero.');
+    }
+    if (!idempotencyKey || typeof idempotencyKey !== 'string') {
+      throw new ValidationError('idempotency_key é obrigatório.');
+    }
+
+    const result = await transaction(async (client) => {
+      // Peek não travado — só pra descobrir qual mercado travar. market_id
+      // nunca muda numa aposta existente, então isso não é um risco de TOCTOU.
+      const peek = await client.query('SELECT market_id FROM wagers WHERE id = $1;', [wagerId]);
+      if (!peek.rows[0]) throw new NotFoundError('Aposta não encontrada.');
+
+      // ORDEM DE LOCK: mercado PRIMEIRO (igual placeWager/resolveMarket/deleteMarket).
+      const market = await marketRepository.findByIdForUpdate(peek.rows[0].market_id, client);
+      if (!market || market.status !== 'open') {
+        throw new ConflictError('Cashout indisponível: o mercado não está mais aberto.');
+      }
+
+      // ORDEM DE LOCK: aposta SEGUNDA. Posse + mercado embutidos no WHERE
+      // (IDOR-safe — ver findByIdForUpdate).
+      const wager = await wagerRepository.findByIdForUpdate(wagerId, market.id, userId, client);
+      if (!wager) throw new NotFoundError('Aposta não encontrada.');
+      if (wager.status !== 'pending') {
+        throw new ConflictError('Cashout indisponível: essa aposta já foi resolvida.');
+      }
+
+      const remainingStake = Number(wager.amount) - Number(wager.cashed_out_amount);
+      if (requestedStake >= remainingStake) {
+        // Nunca deixa o restante chegar a exatamente zero nesta milestone
+        // (cashout total é só v2 — CASHOUT-V2-01).
+        throw new ValidationError('Valor excede o saldo apostável restante para cashout parcial.');
+      }
+
+      const gross = money.multiply(requestedStake, Number(wager.odds_at_time));
+      const { fee, net } = money.applyFeePercent(gross, env.CASHOUT_FEE_PERCENT);
+
+      let cashout;
+      let isReplay = false;
+      try {
+        cashout = await cashoutRepository.create(
+          {
+            wagerId,
+            userId,
+            stakeCashedOut: requestedStake,
+            grossValue: gross,
+            feeAmount: fee,
+            netValue: net,
+            idempotencyKey,
+          },
+          client
+        );
+      } catch (err) {
+        if (err.code === '23505') {
+          // Mesma (wager_id, idempotency_key) já commitada antes — devolve o
+          // resultado já existente, NÃO reaplica o crédito na carteira nem o
+          // incremento de cashed_out_amount.
+          cashout = await cashoutRepository.findByIdempotencyKey(wagerId, idempotencyKey, client);
+          isReplay = true;
+        } else {
+          throw err;
+        }
+      }
+
+      let remainingStakeAfter;
+      if (!isReplay) {
+        await wagerRepository.incrementCashedOutAmount(wagerId, requestedStake, client);
+
+        // ORDEM DE LOCK: carteira TERCEIRA.
+        const wallet = await walletRepository.findByUserIdForUpdate(userId, client);
+        const balanceBefore = wallet.balance;
+        const updated = await walletRepository.adjustBalance(wallet.id, Number(cashout.net_value), client);
+        await walletRepository.recordTransaction(
+          {
+            walletId: wallet.id,
+            type: 'credit',
+            amount: Number(cashout.net_value),
+            balanceBefore,
+            balanceAfter: updated.balance,
+            relatedEntity: 'cashout',
+            relatedId: cashout.id,
+            description: `Cashout parcial da aposta #${wagerId}`,
+          },
+          client
+        );
+
+        remainingStakeAfter = remainingStake - requestedStake;
+      } else {
+        remainingStakeAfter = Number(wager.amount) - Number(wager.cashed_out_amount);
+      }
+
+      return {
+        cashout,
+        wagerId,
+        marketId: market.id,
+        userId,
+        question: market.question,
+        netValue: Number(cashout.net_value),
+        grossValue: Number(cashout.gross_value),
+        feeAmount: Number(cashout.fee_amount),
+        stakeCashedOut: Number(cashout.stake_cashed_out),
+        remainingStake: remainingStakeAfter,
+      };
+    });
+
+    // Emitido só depois do commit (D-01): um rollback nunca deve deixar um
+    // evento "fantasma" sem linha correspondente no banco. Também dispara
+    // numa reprodução idempotente — o próprio listener (Plan 02-05) é
+    // idempotente por relatedId, seguindo a convenção já existente de "emit
+    // é best-effort, quem consome trata a deduplicação".
+    domainEvents.emit('wager.cashed_out', {
+      cashoutId: result.cashout.id,
+      wagerId: result.wagerId,
+      userId: result.userId,
+      marketId: result.marketId,
+      question: result.question,
+      netValue: result.netValue,
+      grossValue: result.grossValue,
+      feeAmount: result.feeAmount,
+      stakeCashedOut: result.stakeCashedOut,
+      remainingStake: result.remainingStake,
+    });
+
+    return result;
   }
 
   async getMyWagers(userId) {
