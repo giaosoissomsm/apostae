@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 02
 current_phase_name: partial-cashout
 status: executing
-stopped_at: Completed 02-01-PLAN.md
-last_updated: "2026-07-14T17:35:09.664Z"
+stopped_at: Completed 02-03-PLAN.md
+last_updated: "2026-07-14T17:39:58.565Z"
 last_activity: 2026-07-14
 last_activity_desc: Phase 02 execution started
 progress:
   total_phases: 4
   completed_phases: 1
   total_plans: 11
-  completed_plans: 6
+  completed_plans: 7
   percent: 25
 ---
 
@@ -32,7 +32,7 @@ transactions, even under concurrent access.
 ## Current Position
 
 Phase: 02 (partial-cashout) — EXECUTING
-Plan: 3 of 7
+Plan: 4 of 7
 Status: Ready to execute
 Last activity: 2026-07-14 — Phase 02 execution started
 
@@ -64,6 +64,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 01 P04 | 25min | 2 tasks | 4 files |
 | Phase 02 P01 | 15min | 3 tasks | 5 files |
 | Phase 02 P02 | 12min | 2 tasks | 3 files |
+| Phase 02 P03 | 8min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -102,6 +103,8 @@ Recent decisions affecting current work:
 - Phase 2 P01: money.js uses zero-dependency integer-cents arithmetic (not decimal.js), with a Number.EPSILON pre-rounding correction fixing a real IEEE-754 rounding bug in the RESEARCH.md-specified formula (1.005*100 rounds to 100 instead of 101 without the fix). Prevents CASHOUT-10's exact anti-drift guarantee from being violated by the naive spec; avoids a new production dependency.
 - [Phase ?]: Phase 2 P02: cashoutRepository.create does not catch 23505 -- the service layer (Plan 02-03) owns idempotency-replay semantics, matching the existing notificationRepository/notificationService split.
 - [Phase ?]: Phase 2 P02: wagerRepository.findByIdForUpdate bakes user_id and market_id ownership into the FOR UPDATE WHERE clause itself -- stronger IDOR mitigation than cancelWager's existing lock-then-check-afterward pattern.
+- [Phase ?]: Phase 2 P03: resolveMarket win payout scaled via remainingFraction = (amount - cashed_out_amount) / amount, applied through money.multiply(potential_payout, remainingFraction) — closes the double-pay bug (RESEARCH.md Pitfall 2), reduces to unchanged original-payout behavior when cashed_out_amount = 0.
+- [Phase ?]: Phase 2 P03: resolution-integration test verified via a temporary mock-backed jest dry run (deleted before commit) since no live test-DB is reachable in this sandbox (carried-forward Phase 1 blocker, reconfirmed with both default and explicit apostae_test DB_NAME overrides).
 
 ### Pending Todos
 
@@ -134,7 +137,7 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-07-14T17:34:53.462Z
-Stopped at: Completed 02-01-PLAN.md
+Last session: 2026-07-14T17:39:58.553Z
+Stopped at: Completed 02-03-PLAN.md
 Resume file: 
 None
