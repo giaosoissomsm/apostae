@@ -71,6 +71,7 @@ Money movement (wallet balance, wagers, cashouts, cancellations) must always be 
 | Notifications: structure-only, no WebSocket/SSE this milestone | No realtime transport exists in the codebase; brief explicitly allows "prepare structure for future implementation" as a fallback | — Pending |
 | New market types get full admin UI, not API-only | requisitos.txt explicitly requires the admin panel to support creating these market types | — Pending |
 | Existing binary Sim/Não market logic is extended, not replaced | Minimizes regression risk on live financial logic; Validated requirement stays intact | — Pending |
+| Partial cashout uses a stake-proportional formula (stake × odds_at_time × fraction, minus fee), not probability-weighted | ApostaE has no live-odds feed; a probability-weighted "fair value" formula would be ungrounded and hard to audit. Stake-proportional is deterministic, transparent, and matches the cancellation-fee mechanism. Confirmed by project owner after research flagged it as needing explicit sign-off. | — Pending |
 
 ---
 *Last updated: 2026-07-13 after initialization*
