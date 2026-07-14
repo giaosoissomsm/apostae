@@ -93,6 +93,20 @@ Recent decisions affecting current work:
   minimum" requirement is satisfied by the existing positive-amount validation only (reject
   zero/negative); no additional floor is enforced.
 
+- Phase 3: Multiple-choice market option count is bounded server-side at 2–20 options (engineering
+  judgment call, not a business rule — requisitos.txt only says "don't limit to 3" and "must be
+  dynamic," no explicit ceiling). 20 comfortably covers realistic use cases (e.g. "who scores
+  first" with a full roster) while bounding payload size/DoS risk.
+
+- Phase 3: Over/Under gets a dedicated admin form (threshold + Odds Over + Odds Under: 3 fields,
+  corrected from an earlier "2-field" shorthand — labels ("Over X"/"Under X") auto-generate from
+  the threshold, but odds cannot, since every existing market type requires explicit admin-entered
+  odds per option, same as binary's odds_yes/odds_no), not the generic free-text multi-option form
+  used for multiple-choice — matches requisitos.txt's framing ("o sistema deve permitir configurar
+  o limite livremente") and avoids admins hand-typing "Over 2.5"/"Under 2.5" as free-text options
+  with typo/mismatch risk. (Clarified during 03-UI-SPEC.md review — engineering judgment call, not
+  a user-set business rule, so corrected without a checkpoint.)
+
 - Phase 1: Notifications are structure-only this milestone (DB + read/unread + paginated API);
   no WebSocket/SSE. Must be built so real-time delivery can be added later without a rewrite.
 

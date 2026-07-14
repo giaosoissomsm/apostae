@@ -51,14 +51,17 @@ Declared values (must be multiples of 4):
 
 ## Typography
 
+Declared type scale for Phase 3's new markup — 2 weights only:
+
 | Role | Size | Weight | Line Height |
 |------|------|--------|-------------|
 | Body | 14px | 400 (Inter regular) | 1.5 |
 | Label | 12px | 400 (Inter regular, uppercase, letter-spacing .03em) | 1.4 |
 | Heading | 18px | 600 (Inter semibold, `.panel h2` / `.ticket-question` precedent) | 1.35 |
-| Display | 30px | 700 (Space Grotesk bold, `.page-head h1` precedent) | 1.2 |
 
-Two dominant weights for **new** Phase 3 elements: **400 regular** (body text, form inputs, option-row labels) and **600 semibold** (section sub-headings, emphasis). Pre-existing 500/700 weight usages (nav links, brand mark, `.btn-primary`) are untouched, reused as-is where the matching class is reused — no new 500/700 usage is introduced by this phase's new markup.
+Two dominant weights for **new** Phase 3 elements: **400 regular** (body text, form inputs, option-row labels) and **600 semibold** (section sub-headings, emphasis).
+
+**Pre-existing, unmodified, out of scope:** `.page-head h1` (30px / 700 / Space Grotesk bold) and other pre-existing 500-weight usages (nav links, brand mark, `.btn-primary`) are reused as-is via their existing classes where applicable, but Phase 3 introduces no new markup at these weights — they are not part of this phase's declared 2-weight scale.
 
 ---
 
@@ -111,7 +114,7 @@ Two dominant weights for **new** Phase 3 elements: **400 regular** (body text, f
 | `#mThreshold`, `#mOddsOver`, `#mOddsUnder` | Over/Under dedicated inputs | `.field input[type=number]` (identical to existing `#mOddsYes`/`#mOddsNo`) |
 | `.options-list` | Vertical container for multiple-choice dynamic rows | New: `display:flex; flex-direction:column; gap: 8px;` (uses `sm` spacing token) |
 | `.option-row` | One label+odds+remove row | New: `display:flex; gap:8px; align-items:center;` — reuses `.inline-form input` styling for its two inputs |
-| `.option-row .remove-option` | Per-row remove button | `.btn-ghost` + inline destructive coloring (matches existing "Deletar" pattern exactly) |
+| `.option-row .remove-option` | Per-row remove button (icon-only "×") | `.btn-ghost` + inline destructive coloring (matches existing "Deletar" pattern exactly); MUST carry `aria-label="Remover opção"` since it has no visible text |
 | `#addOptionBtn` | "+ Adicionar opção" button | `.btn-ghost` (unchanged style) |
 | `.odd-btn.option` | Generalized N-option wager button (Over/Under, multiple-choice) | `.odd-btn` base (unchanged) + neutral value color override (`var(--text)` instead of `--sim`/`--nao`) |
 | `.odds-row.multi` | Wrapping variant of `.odds-row` for 3+ options | New CSS addition only: `flex-wrap: wrap;` + `.odds-row.multi .odd-btn.option { flex: 1 1 120px; min-width: 120px; }` — does not touch the base `.odds-row` rule binary markets use |
@@ -164,6 +167,8 @@ The existing table (`Pergunta | Odds | Status | Agenda | Resultado | Ações`) g
 ## Dashboard — Option Rendering Contract
 
 **Regression guard first:** for any market where `market.market_type === 'binary'`, `ticketTemplate()`'s output must be byte-identical to today's — same two `.odd-btn.sim`/`.odd-btn.nao` buttons, same labels ("Sim"/"Não"), same `.odds-row` (no `.multi` modifier applied). This is the direct implementation of MARKET-03 at the rendering layer; do not introduce a single shared code path that changes binary's markup as a side effect of generalizing the other two types.
+
+**Focal point:** the selected `.odd-btn.option` (or `.odd-btn.sim`/`.odd-btn.nao` for binary) is the primary visual anchor of each ticket — same role the existing binary selection state already plays; the generalization does not introduce a new anchor, it reuses the existing one for N options instead of 2.
 
 **Generalized (non-binary) rendering:**
 1. `market.options[]` (array from the N+1-safe `json_agg` query, RESEARCH.md Pattern 3) drives one `.odd-btn.option` per entry, each showing `option.label` (upper area, matches existing `.odd-btn .label` styling) and `option.odds.toFixed(2)}x` (matches existing `.odd-btn .value` styling) — neutral color per the Color contract above.
