@@ -96,13 +96,22 @@ class WagerService {
 
       await wagerRepository.updateStatus(wagerId, 'refunded', client);
 
+      // Reembolsa só a fração AINDA presa na aposta (amount - cashed_out_amount)
+      // — um cashout parcial prévio já devolveu parte do valor ao usuário, então
+      // reembolsar o wager.amount integral aqui seria um pagamento duplicado
+      // sobre a mesma stake (mesma classe de bug de RESEARCH.md Pitfall 2,
+      // já corrigida em resolveMarket — ver 02-REVIEW.md CR-02). Quando
+      // cashed_out_amount = 0 (padrão), remainingStake é idêntico ao
+      // wager.amount original (garantia de regressão).
+      const remainingStake = Number(wager.amount) - Number(wager.cashed_out_amount);
+
       const wallet = await walletRepository.findByUserIdForUpdate(userId, client);
       const balanceBefore = wallet.balance;
-      const updated = await walletRepository.adjustBalance(wallet.id, Number(wager.amount), client);
+      const updated = await walletRepository.adjustBalance(wallet.id, remainingStake, client);
       await walletRepository.recordTransaction({
         walletId: wallet.id,
         type: 'refund',
-        amount: wager.amount,
+        amount: remainingStake,
         balanceBefore,
         balanceAfter: updated.balance,
         relatedEntity: 'wager',
@@ -110,7 +119,7 @@ class WagerService {
         description: `Cancelamento da aposta #${wager.id}`,
       }, client);
 
-      return { marketId: wager.market_id, amount: Number(wager.amount), question: market.question };
+      return { marketId: wager.market_id, amount: remainingStake, question: market.question };
     });
 
     // Emitido só depois do commit (D-01): um rollback nunca deve deixar um
