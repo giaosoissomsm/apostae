@@ -5,6 +5,7 @@ const walletRepository = require('../repositories/walletRepository');
 const domainEvents = require('../events/domainEvents');
 const { ValidationError, NotFoundError, ConflictError } = require('../utils/errors');
 const logger = require('../utils/logger');
+const money = require('../utils/money');
 
 function isValidOdds(n) {
   return Number.isFinite(n) && n >= 1.01 && n <= 1000;
@@ -130,13 +131,23 @@ class MarketService {
         if (wager.choice === outcome) {
           await wagerRepository.updateStatus(wager.id, 'won', client);
 
+          // Paga apenas a fração restante (pós-cashout) da aposta, nunca o
+          // potential_payout integral incondicionalmente — um cashout parcial
+          // prévio já devolveu parte do valor ao usuário, então pagar o valor
+          // cheio aqui seria um pagamento duplicado sobre a mesma stake
+          // (RESEARCH.md Pitfall 2). Quando cashed_out_amount = 0 (padrão),
+          // remainingFraction é exatamente 1 e o valor pago é idêntico ao
+          // potential_payout original (garantia de regressão).
+          const remainingFraction = (Number(wager.amount) - Number(wager.cashed_out_amount)) / Number(wager.amount);
+          const remainingPayout = money.multiply(wager.potential_payout, remainingFraction);
+
           const wallet = await walletRepository.findByUserIdForUpdate(wager.user_id, client);
           const balanceBefore = wallet.balance;
-          const updated = await walletRepository.adjustBalance(wallet.id, wager.potential_payout, client);
+          const updated = await walletRepository.adjustBalance(wallet.id, remainingPayout, client);
           await walletRepository.recordTransaction({
             walletId: wallet.id,
             type: 'credit',
-            amount: wager.potential_payout,
+            amount: remainingPayout,
             balanceBefore,
             balanceAfter: updated.balance,
             relatedEntity: 'market_resolved',
@@ -149,7 +160,7 @@ class MarketService {
             userId: wager.user_id,
             won: true,
             amount: Number(wager.amount),
-            payout: Number(wager.potential_payout),
+            payout: remainingPayout,
           });
         } else {
           await wagerRepository.updateStatus(wager.id, 'lost', client);
