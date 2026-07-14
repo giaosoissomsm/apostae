@@ -152,6 +152,15 @@ class WagerService {
     if (!idempotencyKey || typeof idempotencyKey !== 'string') {
       throw new ValidationError('idempotency_key é obrigatório.');
     }
+    // wager_cashouts.idempotency_key é VARCHAR(200) — sem esta checagem, uma
+    // chave maior estoura a coluna dentro da transação com um erro Postgres
+    // 22001 não tratado (errorHandler.js só reconhece códigos que começam
+    // com 'P', o que nenhum SQLSTATE real faz), vazando o texto bruto do
+    // erro numa resposta 500 em vez do ValidationError operacional que o
+    // resto desta validação usa.
+    if (idempotencyKey.length > 200) {
+      throw new ValidationError('idempotency_key excede o tamanho máximo permitido (200 caracteres).');
+    }
 
     const result = await transaction(async (client) => {
       // Peek não travado — só pra descobrir qual mercado travar. market_id
