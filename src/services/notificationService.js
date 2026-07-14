@@ -114,6 +114,22 @@ function register() {
       });
     }
   }));
+
+  // relatedId aqui é evt.cashoutId (id da própria linha de wager_cashouts),
+  // NUNCA evt.wagerId — um mesmo wager pode ser objeto de vários cashouts
+  // parciais, e usar wagerId colidiria com a constraint
+  // UNIQUE(user_id, type, related_entity, related_id), fazendo o segundo
+  // cashout do mesmo wager ser silenciosamente engolido pelo catch de 23505
+  // acima (ver RESEARCH.md Pitfall 3).
+  domainEvents.on('wager.cashed_out', safeHandler(async (evt) => {
+    await notify(evt.userId, {
+      type: 'wager.cashed_out',
+      title: 'Cashout realizado',
+      body: `Você sacou R$${evt.netValue.toFixed(2)} da sua aposta em "${evt.question}". O restante continua ativo.`,
+      relatedEntity: 'cashout',
+      relatedId: evt.cashoutId,
+    });
+  }));
 }
 
 async function listForUser(userId, { page, limit, unreadOnly } = {}) {
