@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 02
 current_phase_name: partial-cashout
 status: executing
-stopped_at: Completed 02-03-PLAN.md
-last_updated: "2026-07-14T17:39:58.565Z"
+stopped_at: Completed 02-04-PLAN.md
+last_updated: "2026-07-14T17:47:13.611Z"
 last_activity: 2026-07-14
 last_activity_desc: Phase 02 execution started
 progress:
   total_phases: 4
   completed_phases: 1
   total_plans: 11
-  completed_plans: 7
+  completed_plans: 8
   percent: 25
 ---
 
@@ -32,7 +32,7 @@ transactions, even under concurrent access.
 ## Current Position
 
 Phase: 02 (partial-cashout) — EXECUTING
-Plan: 4 of 7
+Plan: 5 of 7
 Status: Ready to execute
 Last activity: 2026-07-14 — Phase 02 execution started
 
@@ -65,6 +65,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 02 P01 | 15min | 3 tasks | 5 files |
 | Phase 02 P02 | 12min | 2 tasks | 3 files |
 | Phase 02 P03 | 8min | 2 tasks | 2 files |
+| Phase 02 P04 | 10min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -105,6 +106,8 @@ Recent decisions affecting current work:
 - [Phase ?]: Phase 2 P02: wagerRepository.findByIdForUpdate bakes user_id and market_id ownership into the FOR UPDATE WHERE clause itself -- stronger IDOR mitigation than cancelWager's existing lock-then-check-afterward pattern.
 - [Phase ?]: Phase 2 P03: resolveMarket win payout scaled via remainingFraction = (amount - cashed_out_amount) / amount, applied through money.multiply(potential_payout, remainingFraction) — closes the double-pay bug (RESEARCH.md Pitfall 2), reduces to unchanged original-payout behavior when cashed_out_amount = 0.
 - [Phase ?]: Phase 2 P03: resolution-integration test verified via a temporary mock-backed jest dry run (deleted before commit) since no live test-DB is reachable in this sandbox (carried-forward Phase 1 blocker, reconfirmed with both default and explicit apostae_test DB_NAME overrides).
+- [Phase 02]: Phase 2 P04: cashoutWager's idempotent-replay path reads netValue/grossValue/feeAmount/stakeCashedOut back from the already-committed wager_cashouts row rather than recomputing, guaranteeing byte-identical values on retry. — Idempotency must return the original result, not a freshly recomputed one, in case of any incidental drift between the original and retried request.
+- [Phase 02]: Phase 2 P04: domainEvents.emit('wager.cashed_out', ...) fires unconditionally after transaction() resolves, including on the idempotent-replay branch -- matches the existing emit-is-best-effort/consumer-owns-dedup convention. — Consistent with notificationService's own idempotency handling; avoids adding special-case branching in the service layer.
 
 ### Pending Todos
 
@@ -121,11 +124,12 @@ None yet.
   `src/middleware/rateLimiter.js`, modified auth/config/controllers) predating this planning
   session — verify current file state before assuming contents when Phase 1 planning starts.
 
-- No test framework is currently installed (package.json has none), despite requisitos.txt
+- No test framework is currently installed (package.json has ), despite requisitos.txt
   mandating concurrency/attack-vector testing — must be resolved before Phase 2's concurrency
   tests can be written.
 
 - No live Postgres test database is reachable from this environment for any *test*-named DB (only 'apostae' — the dev/prod db — connects; pg_hba.conf/proxy on the DB host rejects even 'postgres' and a freshly-CREATE-DATABASE'd 'apostae_test'). tests/notifications.events.test.js and tests/notifications.idempotency.test.js (Plan 02) and tests/notifications.ownership.test.js, tests/notifications.pagination.test.js, tests/notifications.read-state.test.js (Plan 03) are written and correct per source/mock-backed review but could not be run against real Postgres. Must be resolved (DB host pg_hba/proxy allowlist, or a separate local test Postgres) before Plan 04's own integration tests — and all five existing notification test files — can get a real pass/fail signal.
+- No live *test*-named Postgres database reachable in this sandbox (carried forward through Phase 2 Plan 04) -- tests/cashout.computation.test.js and tests/cashout.validation.test.js are written and correct but unexecuted against real Postgres; compensated via a temporary mock-backed dry run (all 15 assertions passed).
 
 ## Deferred Items
 
@@ -137,7 +141,7 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-07-14T17:39:58.553Z
-Stopped at: Completed 02-03-PLAN.md
+Last session: 2026-07-14T17:47:13.600Z
+Stopped at: Completed 02-04-PLAN.md
 Resume file: 
 None
