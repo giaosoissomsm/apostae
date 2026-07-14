@@ -2,18 +2,18 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-current_phase: 01
-current_phase_name: notifications-infrastructure
-status: verifying
-stopped_at: Completed 01-04-PLAN.md
-last_updated: "2026-07-14T12:59:22.927Z"
+current_phase: 02
+current_phase_name: partial-cashout
+status: executing
+stopped_at: Completed 02-01-PLAN.md
+last_updated: "2026-07-14T17:32:08.243Z"
 last_activity: 2026-07-14
-last_activity_desc: Phase 01 execution started
+last_activity_desc: Phase 02 execution started
 progress:
   total_phases: 4
   completed_phases: 1
-  total_plans: 4
-  completed_plans: 4
+  total_plans: 11
+  completed_plans: 5
   percent: 25
 ---
 
@@ -27,14 +27,14 @@ See: .planning/PROJECT.md (updated 2026-07-13)
 correct and auditable — a user's balance must never diverge from the sum of their recorded
 transactions, even under concurrent access.
 
-**Current focus:** Phase 01 — notifications-infrastructure
+**Current focus:** Phase 02 — partial-cashout
 
 ## Current Position
 
-Phase: 01 (notifications-infrastructure) — EXECUTING
-Plan: 4 of 4
-Status: Phase complete — ready for verification
-Last activity: 2026-07-14 — Phase 01 execution started
+Phase: 02 (partial-cashout) — EXECUTING
+Plan: 2 of 7
+Status: Ready to execute
+Last activity: 2026-07-14 — Phase 02 execution started
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -62,6 +62,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 01 P02 | 35min | 2 tasks | 6 files |
 | Phase 01 P03 | 22min | 2 tasks | 6 files |
 | Phase 01 P04 | 25min | 2 tasks | 4 files |
+| Phase 02 P01 | 15min | 3 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -78,6 +79,14 @@ Recent decisions affecting current work:
   not probability-weighted — confirmed by project owner (no live-odds feed exists to ground a
   "fair value" formula).
 
+- Phase 2: Cashout fee is 0% (no fee) — confirmed by project owner. "Minus fee" in the formula
+  above resolves to a no-op this milestone; keep the fee term in the formula/schema so a future
+  milestone can introduce a nonzero fee without a payout-formula rewrite.
+
+- Phase 2: No minimum cashout amount — confirmed by project owner. CASHOUT-04's "reject below
+  minimum" requirement is satisfied by the existing positive-amount validation only (reject
+  zero/negative); no additional floor is enforced.
+
 - Phase 1: Notifications are structure-only this milestone (DB + read/unread + paginated API);
   no WebSocket/SSE. Must be built so real-time delivery can be added later without a rewrite.
 
@@ -89,6 +98,7 @@ Recent decisions affecting current work:
 - [Phase ?]: Phase 1 P04: Extended tests/helpers/testDb.js with applyWalletSchema()/seedWallet() (beyond plan's files_modified) - wagerService/marketService's financial transactions read/write the wallets table, so the emission tests need funded test wallets to exercise real placeWager/cancelWager/resolveMarket/deleteMarket.
 - [Phase ?]: Phase 1 P04: resolveMarket/deleteMarket destructure internal-only fields (wagerOutcomes/refunds/question) out of the transaction's return value, emit from that data, but the method's own return still yields the original external shape - verified with an explicit toBeUndefined() assertion so no internal field leaks into the controller's res.json(...) response.
 - [Phase ?]: Phase 1 P04: Verified all 5 emission call sites via two temporary mock-backed jest dry runs (deleted before commit) driving the real wagerService.js/marketService.js against a fake Postgres client, since no live Postgres test database is reachable in this sandbox (same limitation as Plans 01-02/01-03).
+- Phase 2 P01: money.js uses zero-dependency integer-cents arithmetic (not decimal.js), with a Number.EPSILON pre-rounding correction fixing a real IEEE-754 rounding bug in the RESEARCH.md-specified formula (1.005*100 rounds to 100 instead of 101 without the fix). Prevents CASHOUT-10's exact anti-drift guarantee from being violated by the naive spec; avoids a new production dependency.
 
 ### Pending Todos
 
@@ -121,7 +131,7 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-07-14T12:59:22.915Z
-Stopped at: Completed 01-04-PLAN.md
+Last session: 2026-07-14T17:32:08.231Z
+Stopped at: Completed 02-01-PLAN.md
 Resume file: 
 None
