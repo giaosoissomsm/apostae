@@ -210,3 +210,7 @@ To compensate, verification for this plan relied on three independent layers ins
 ---
 *Phase: 01-notifications-infrastructure*
 *Completed: 2026-07-14*
+
+## Self-Check: PASSED
+
+All 5 files found on disk (wagerService.js, marketService.js, notifications.emission.test.js, testDb.js, this SUMMARY). All 3 commits (`97a1f77`, `478b852`, `d18c490`) found in git log.
