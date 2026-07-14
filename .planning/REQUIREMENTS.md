@@ -83,20 +83,51 @@ Deferred to future release. Tracked but not in current roadmap.
 
 ## Traceability
 
-Populated during roadmap creation.
-
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| NOTIF-01..10 | TBD | Pending |
-| CASHOUT-01..10 | TBD | Pending |
-| MARKET-01..08 | TBD | Pending |
-| CANCEL-01..08 | TBD | Pending |
+| NOTIF-01 | Phase 1 | Pending |
+| NOTIF-02 | Phase 1 | Pending |
+| NOTIF-03 | Phase 1 | Pending |
+| NOTIF-04 | Phase 1 | Pending |
+| NOTIF-05 | Phase 1 | Pending |
+| NOTIF-06 | Phase 1 | Pending |
+| NOTIF-07 | Phase 1 | Pending |
+| NOTIF-08 | Phase 1 | Pending |
+| NOTIF-09 | Phase 1 | Pending |
+| NOTIF-10 | Phase 1 | Pending |
+| CASHOUT-01 | Phase 2 | Pending |
+| CASHOUT-02 | Phase 2 | Pending |
+| CASHOUT-03 | Phase 2 | Pending |
+| CASHOUT-04 | Phase 2 | Pending |
+| CASHOUT-05 | Phase 2 | Pending |
+| CASHOUT-06 | Phase 2 | Pending |
+| CASHOUT-07 | Phase 2 | Pending |
+| CASHOUT-08 | Phase 2 | Pending |
+| CASHOUT-09 | Phase 2 | Pending |
+| CASHOUT-10 | Phase 2 | Pending |
+| MARKET-01 | Phase 3 | Pending |
+| MARKET-02 | Phase 3 | Pending |
+| MARKET-03 | Phase 3 | Pending |
+| MARKET-04 | Phase 3 | Pending |
+| MARKET-05 | Phase 3 | Pending |
+| MARKET-06 | Phase 3 | Pending |
+| MARKET-07 | Phase 3 | Pending |
+| MARKET-08 | Phase 3 | Pending |
+| CANCEL-01 | Phase 4 | Pending |
+| CANCEL-02 | Phase 4 | Pending |
+| CANCEL-03 | Phase 4 | Pending |
+| CANCEL-04 | Phase 4 | Pending |
+| CANCEL-05 | Phase 4 | Pending |
+| CANCEL-06 | Phase 4 | Pending |
+| CANCEL-07 | Phase 4 | Pending |
+| CANCEL-08 | Phase 4 | Pending |
 
 **Coverage:**
 - v1 requirements: 36 total
-- Mapped to phases: 0 (pending roadmap creation)
-- Unmapped: 36 ⚠️ (expected before roadmap step)
+- Mapped to phases: 36
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-07-13*
-*Last updated: 2026-07-13 after initial definition*
+*Last updated: 2026-07-13 after roadmap creation*
+</content>
