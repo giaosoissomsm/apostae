@@ -14,8 +14,8 @@ Requirements for this milestone. Each maps to a roadmap phase. Build order: NOTI
 - [x] **NOTIF-03**: User is notified when their wager wins
 - [x] **NOTIF-04**: User is notified when their wager loses
 - [x] **NOTIF-05**: User is notified on any other relevant wager status change (e.g. cancelled)
-- [ ] **NOTIF-06**: User can list their notifications paginated, newest first
-- [ ] **NOTIF-07**: User can mark a notification as read; unread/read state persists
+- [x] **NOTIF-06**: User can list their notifications paginated, newest first
+- [x] **NOTIF-07**: User can mark a notification as read; unread/read state persists
 - [x] **NOTIF-08**: Every notification has a timestamp and is retrievable only by its owning user (no IDOR — ownership filter on every query, including by-ID lookups)
 - [x] **NOTIF-09**: Notification-writing is triggered from a single chokepoint (e.g. a domain-event/notify() call) reused by every feature that emits notifications, not duplicated per call site
 - [x] **NOTIF-10**: No push transport (WebSocket/SSE) required this milestone — structure only, but the design must not require a rewrite when real-time delivery is added later
@@ -90,8 +90,8 @@ Deferred to future release. Tracked but not in current roadmap.
 | NOTIF-03 | Phase 1 | Complete |
 | NOTIF-04 | Phase 1 | Complete |
 | NOTIF-05 | Phase 1 | Complete |
-| NOTIF-06 | Phase 1 | Pending |
-| NOTIF-07 | Phase 1 | Pending |
+| NOTIF-06 | Phase 1 | Complete |
+| NOTIF-07 | Phase 1 | Complete |
 | NOTIF-08 | Phase 1 | Complete |
 | NOTIF-09 | Phase 1 | Complete |
 | NOTIF-10 | Phase 1 | Complete |
