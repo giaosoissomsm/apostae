@@ -28,7 +28,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 1: Notifications Infrastructure** - Users are notified of wager/market status events and can read/manage their notification inbox (completed 2026-07-14)
 - [x] **Phase 2: Partial Cashout** - Users can cash out part of an open wager's value pre-resolution, computed and locked safely server-side (completed 2026-07-14)
 - [ ] **Phase 3: New Market Types** - Admins can create Over/Under and multiple-choice markets alongside existing binary markets
-- [ ] **Phase 4: Bet Cancellation v2** - Users can cancel a pending wager for a 5% fee, replacing the old free/pending-only cancellation
+- [x] **Phase 4: Bet Cancellation v2** - Users can cancel a pending wager for a 5% fee, replacing the old free/pending-only cancellation (completed 2026-07-15)
 
 ## Phase Details
 
@@ -135,7 +135,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   4. Cancellation is blocked once the market is closed, the wager is resolved, or a cashout has already occurred on that wager — enforced transactionally (row lock + re-validation) so it cannot race a concurrent cashout or market resolution, verified by a concurrency test (CANCEL-06, CANCEL-07)
   5. The new logic replaces `cancelWager` in place — same route/method, no versioned endpoint or feature flag (CANCEL-08)
 
-**Plans**: 2/3 plans executed
+**Plans**: 3/3 plans complete
 
 **Wave 1**
 
@@ -144,7 +144,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Wave 2** *(blocked on Wave 1 completion)*
 
 - [x] 04-02-PLAN.md — Positive-path tests: happy-path (95% refund/status), fee-computation (off remaining stake), audit trail
-- [ ] 04-03-PLAN.md — Negative + attack-vector tests: 3 blocking conditions, concurrency (cancel-vs-cashout / cancel-vs-resolve), IDOR/mass-assignment/route-preservation
+- [x] 04-03-PLAN.md — Negative + attack-vector tests: 3 blocking conditions, concurrency (cancel-vs-cashout / cancel-vs-resolve), IDOR/mass-assignment/route-preservation
 
 ## Progress
 
@@ -156,5 +156,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 | 1. Notifications Infrastructure | 4/4 | Complete   | 2026-07-14 |
 | 2. Partial Cashout | 7/7 | Complete   | 2026-07-14 |
 | 3. New Market Types | 6/7 | In Progress|  |
-| 4. Bet Cancellation v2 | 2/3 | In Progress|  |
+| 4. Bet Cancellation v2 | 3/3 | Complete   | 2026-07-15 |
 </content>

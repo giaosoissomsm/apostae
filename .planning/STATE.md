@@ -4,17 +4,17 @@ milestone: v1.0
 milestone_name: milestone
 current_phase: 04
 current_phase_name: bet-cancellation-v2
-status: executing
-stopped_at: Completed 04-02-PLAN.md
-last_updated: "2026-07-15T05:01:59.607Z"
+status: verifying
+stopped_at: Completed 04-03-PLAN.md
+last_updated: "2026-07-15T05:11:54.838Z"
 last_activity: 2026-07-15
 last_activity_desc: Phase 04 execution started
 progress:
   total_phases: 4
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 21
-  completed_plans: 20
-  percent: 75
+  completed_plans: 21
+  percent: 100
 ---
 
 # Project State
@@ -33,7 +33,7 @@ transactions, even under concurrent access.
 
 Phase: 04 (bet-cancellation-v2) — EXECUTING
 Plan: 3 of 3
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-07-15 — Phase 04 execution started
 
 Progress: [░░░░░░░░░░] 0%
@@ -77,6 +77,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 03 P06 | 12min | 2 tasks | 3 files |
 | Phase 04 P01 | 20min | 3 tasks | 3 files |
 | Phase 04 P02 | 15min | 3 tasks | 3 files |
+| Phase 04 P03 | 25min | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -164,6 +165,8 @@ Recent decisions affecting current work:
 - [Phase ?]: Phase 4 P01: cancelWager's AuthorizationError import removed -- ownership is now enforced entirely by wagerRepository.findByIdForUpdate's WHERE clause returning null (404 NotFoundError), never a 403, closing the previously-documented weaker IDOR pattern.
 - [Phase ?]: Phase 4 P01: .env.example edit skipped -- file is blocked by this sandbox's own permission settings (.env* deny pattern), so its CASHOUT_FEE_PERCENT documentation could not be verified; CANCEL_FEE_PERCENT is fully functional via its code default (5) regardless.
 - [Phase ?]: Phase 4 P02: mock-backed dry run (deleted before commit, fakes only src/config/database.js query()/transaction() exports) verified all 23 assertions in the three new cancel.*.test.js files against the real unmodified cancelWager, since no live *test*-named Postgres is reachable in this sandbox (4th consecutive phase with this blocker).
+- [Phase ?]: Phase 4 P03: mock-backed dry run for CANCEL-07 used a genuine async-mutex row-lock emulator (not a sequential fake) so Promise.allSettled races actually contend for market/wager/wallet locks — run under both array orderings to exercise both branches of the tolerant race assertions, since no live *test*-named Postgres is reachable in this sandbox (5th consecutive phase with this blocker).
+- [Phase ?]: Phase 4 P03: cancel.tampering.test.js splits into two describe blocks (DB-dependent IDOR test vs. no-beforeAll static structural checks) so a test-DB outage never masks the static tests' own pass/fail signal — verified live that the split works as intended in this sandbox (2 static tests genuinely passed, only the IDOR test failed on the expected DB-connectivity error).
 
 ### Pending Todos
 
@@ -186,6 +189,7 @@ None yet.
 
 - No live Postgres test database is reachable from this environment for any *test*-named DB (only 'apostae' — the dev/prod db — connects; pg_hba.conf/proxy on the DB host rejects even 'postgres' and a freshly-CREATE-DATABASE'd 'apostae_test'). tests/notifications.events.test.js and tests/notifications.idempotency.test.js (Plan 02) and tests/notifications.ownership.test.js, tests/notifications.pagination.test.js, tests/notifications.read-state.test.js (Plan 03) are written and correct per source/mock-backed review but could not be run against real Postgres. Must be resolved (DB host pg_hba/proxy allowlist, or a separate local test Postgres) before Plan 04's own integration tests — and all five existing notification test files — can get a real pass/fail signal.
 - No live *test*-named Postgres database reachable in this sandbox (carried forward through Phase 2 Plan 04) -- tests/cashout.computation.test.js and tests/cashout.validation.test.js are written and correct but unexecuted against real Postgres; compensated via a temporary mock-backed dry run (all 15 assertions passed).
+- No live *test*-named Postgres database reachable in this sandbox — carried forward through Phase 4 Plan 03 (5th consecutive phase). tests/cancel.blocking.test.js, tests/cancel.concurrency.test.js, and the IDOR case in tests/cancel.tampering.test.js are written and correct per structural review + a mutex-based mock-backed dry run (both race orderings exercised for CANCEL-07), but have never executed via jest against real Postgres. Must be resolved before /gsd-verify-work or /gsd-complete-milestone for this milestone.
 
 ## Deferred Items
 
@@ -197,6 +201,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-07-15T05:01:59.594Z
-Stopped at: Completed 04-02-PLAN.md
+Last session: 2026-07-15T05:11:54.825Z
+Stopped at: Completed 04-03-PLAN.md
 Resume file: 
