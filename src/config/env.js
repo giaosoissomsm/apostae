@@ -36,6 +36,11 @@ const env = {
   // de valor positivo já aplicada no serviço.
   CASHOUT_FEE_PERCENT: parseFloat(process.env.CASHOUT_FEE_PERCENT || '0'),
 
+  // Cancelamento de aposta (Fase 4). Taxa percentual retida sobre o restante
+  // da stake ao cancelar — 5% por padrão (requisitos.txt fixa esse valor;
+  // o env var só existe pra não hardcodar o número duas vezes no código).
+  CANCEL_FEE_PERCENT: parseFloat(process.env.CANCEL_FEE_PERCENT || '5'),
+
   // Logging
   LOG_LEVEL: process.env.LOG_LEVEL || 'info',
 };
@@ -59,6 +64,17 @@ for (const key of required) {
 if (!Number.isFinite(env.CASHOUT_FEE_PERCENT) || env.CASHOUT_FEE_PERCENT < 0 || env.CASHOUT_FEE_PERCENT > 100) {
   throw new Error(
     `Invalid CASHOUT_FEE_PERCENT: "${process.env.CASHOUT_FEE_PERCENT}" — must be a number between 0 and 100.`
+  );
+}
+
+// CANCEL_FEE_PERCENT precisa estar em [0, 100] pela mesma razão exata do
+// bloco acima: money.applyFeePercent computa fee = gross * (feePercent / 100)
+// sem clamp, então um valor acima de 100 faz `fee > gross`, e o "reembolso"
+// (net = gross - fee) fica NEGATIVO — cancelWager debitaria a carteira em
+// vez de reembolsar. NaN (parseFloat inválido) é igualmente rejeitado aqui.
+if (!Number.isFinite(env.CANCEL_FEE_PERCENT) || env.CANCEL_FEE_PERCENT < 0 || env.CANCEL_FEE_PERCENT > 100) {
+  throw new Error(
+    `Invalid CANCEL_FEE_PERCENT: "${process.env.CANCEL_FEE_PERCENT}" — must be a number between 0 and 100.`
   );
 }
 
