@@ -8,7 +8,7 @@ const cashoutRepository = require('../repositories/cashoutRepository');
 const money = require('../utils/money');
 const env = require('../config/env');
 const domainEvents = require('../events/domainEvents');
-const { ValidationError, NotFoundError, ConflictError, AuthorizationError } = require('../utils/errors');
+const { ValidationError, NotFoundError, ConflictError } = require('../utils/errors');
 const logger = require('../utils/logger');
 
 class WagerService {
@@ -104,17 +104,22 @@ class WagerService {
     return wager;
   }
 
-  // Cancela a PRÓPRIA aposta (só se o mercado ainda estiver aberto). Posse checada contra userId do token.
+  // Cancela a PRÓPRIA aposta (só se o mercado ainda estiver aberto). Posse
+  // embutida no WHERE da query de lock (IDOR-safe — ver findByIdForUpdate).
+  // Ordem de lock fixa: mercado -> aposta -> carteira (igual
+  // placeWager/cashoutWager/resolveMarket/deleteMarket — Fase 4 fecha o
+  // último caminho que ainda travava na ordem oposta, ver 04-RESEARCH.md
+  // Pitfall 2). Bloqueio TOTAL se qualquer cashout já ocorreu — não é mais
+  // um netting parcial (CANCEL-06, decisão do dono do projeto em STATE.md).
   async cancelWager(wagerId, userId) {
     const result = await transaction(async (client) => {
-      const wagerResult = await client.query('SELECT * FROM wagers WHERE id = $1 FOR UPDATE;', [wagerId]);
-      const wager = wagerResult.rows[0];
-      if (!wager) throw new NotFoundError('Aposta não encontrada.');
-      if (wager.user_id !== userId) throw new AuthorizationError('Essa aposta não é sua.');
-      if (wager.status !== 'pending') throw new ConflictError('Essa aposta não pode mais ser cancelada.');
+      // Peek não travado — só pra descobrir qual mercado travar. market_id
+      // nunca muda numa aposta existente, então isso não é um risco de TOCTOU.
+      const peek = await client.query('SELECT market_id FROM wagers WHERE id = $1;', [wagerId]);
+      if (!peek.rows[0]) throw new NotFoundError('Aposta não encontrada.');
 
-      const marketResult = await client.query('SELECT * FROM markets WHERE id = $1 FOR UPDATE;', [wager.market_id]);
-      const market = marketResult.rows[0];
+      // ORDEM DE LOCK: mercado PRIMEIRO (igual placeWager/cashoutWager/resolveMarket/deleteMarket).
+      const market = await marketRepository.findByIdForUpdate(peek.rows[0].market_id, client);
       if (!market || market.status !== 'open') {
         throw new ConflictError('Não é mais possível cancelar: o mercado já fechou.');
       }
@@ -122,32 +127,49 @@ class WagerService {
         throw new ConflictError('Não é mais possível cancelar: o prazo já acabou.');
       }
 
-      await wagerRepository.updateStatus(wagerId, 'refunded', client);
+      // ORDEM DE LOCK: aposta SEGUNDA. Posse + mercado embutidos no WHERE
+      // (IDOR-safe — ver findByIdForUpdate). Retorna null tanto pra aposta
+      // inexistente quanto pra aposta de outro usuário: sempre 404, nunca
+      // 403 (não vaza existência pra quem não é dono).
+      const wager = await wagerRepository.findByIdForUpdate(wagerId, market.id, userId, client);
+      if (!wager) throw new NotFoundError('Aposta não encontrada.');
+      if (wager.status !== 'pending') throw new ConflictError('Essa aposta não pode mais ser cancelada.');
 
-      // Reembolsa só a fração AINDA presa na aposta (amount - cashed_out_amount)
-      // — um cashout parcial prévio já devolveu parte do valor ao usuário, então
-      // reembolsar o wager.amount integral aqui seria um pagamento duplicado
-      // sobre a mesma stake (mesma classe de bug de RESEARCH.md Pitfall 2,
-      // já corrigida em resolveMarket — ver 02-REVIEW.md CR-02). Quando
-      // cashed_out_amount = 0 (padrão), remainingStake é idêntico ao
-      // wager.amount original (garantia de regressão).
+      // CANCEL-06: bloqueio TOTAL se qualquer cashout já ocorreu — checado
+      // ANTES de qualquer cálculo de reembolso/taxa. Substitui o antigo
+      // comportamento (CR-02) que apenas nettava cashed_out_amount fora do
+      // reembolso sem bloquear; a Fase 4 fecha isso outright, por decisão
+      // explícita do dono do projeto (não há mais cancelamento parcial
+      // pós-cashout nesta milestone).
+      if (Number(wager.cashed_out_amount) > 0) {
+        throw new ConflictError('Não é possível cancelar: essa aposta já teve um cashout realizado.');
+      }
+
+      // CANCEL-03: fórmula defensiva — dado o bloqueio acima, remainingStake
+      // sempre é igual a wager.amount na prática, mas mantemos a mesma
+      // fórmula usada em resolveMarket/deleteMarket como proteção caso o
+      // bloqueio seja relaxado numa milestone futura.
       const remainingStake = Number(wager.amount) - Number(wager.cashed_out_amount);
+      const { fee, net } = money.applyFeePercent(remainingStake, env.CANCEL_FEE_PERCENT);
 
+      await wagerRepository.updateStatus(wagerId, 'refunded', client); // reutiliza status existente -> UI já exibe "Cancelada"
+
+      // ORDEM DE LOCK: carteira TERCEIRA.
       const wallet = await walletRepository.findByUserIdForUpdate(userId, client);
       const balanceBefore = wallet.balance;
-      const updated = await walletRepository.adjustBalance(wallet.id, remainingStake, client);
+      const updated = await walletRepository.adjustBalance(wallet.id, net, client);
       await walletRepository.recordTransaction({
         walletId: wallet.id,
         type: 'refund',
-        amount: remainingStake,
+        amount: net,
         balanceBefore,
         balanceAfter: updated.balance,
         relatedEntity: 'wager',
         relatedId: wager.id,
-        description: `Cancelamento da aposta #${wager.id}`,
+        description: `Cancelamento da aposta #${wager.id} (taxa de ${env.CANCEL_FEE_PERCENT}% = R$${fee.toFixed(2)}, reembolso líquido R$${net.toFixed(2)} sobre R$${remainingStake.toFixed(2)})`,
       }, client);
 
-      return { marketId: wager.market_id, amount: remainingStake, question: market.question };
+      return { marketId: market.id, question: market.question, grossAmount: remainingStake, feeAmount: fee, netAmount: net };
     });
 
     // Emitido só depois do commit (D-01): um rollback nunca deve deixar um
@@ -157,11 +179,13 @@ class WagerService {
       userId,
       marketId: result.marketId,
       question: result.question,
-      amount: result.amount,
+      amount: result.netAmount, // preserva a semântica já existente de evt.amount lida por notificationService.js
+      grossAmount: result.grossAmount,
+      feeAmount: result.feeAmount,
     });
 
-    logger.info(`Usuário ${userId} cancelou a aposta #${wagerId}`);
-    return { ok: true };
+    logger.info(`Usuário ${userId} cancelou a aposta #${wagerId} (taxa: R$${result.feeAmount.toFixed(2)})`);
+    return { ok: true, refunded: result.netAmount, fee: result.feeAmount };
   }
 
   // Executa um cashout parcial da PRÓPRIA aposta. Valor sempre calculado no
