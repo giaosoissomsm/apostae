@@ -5,15 +5,15 @@ milestone_name: milestone
 current_phase: 03
 current_phase_name: new-market-types
 status: executing
-stopped_at: Completed 03-01-PLAN.md
-last_updated: "2026-07-15T01:58:47.834Z"
+stopped_at: Completed 03-02-PLAN.md
+last_updated: "2026-07-15T02:17:15.518Z"
 last_activity: 2026-07-15
 last_activity_desc: Phase 03 execution started
 progress:
   total_phases: 4
   completed_phases: 2
   total_plans: 18
-  completed_plans: 12
+  completed_plans: 13
   percent: 50
 ---
 
@@ -32,7 +32,7 @@ transactions, even under concurrent access.
 ## Current Position
 
 Phase: 03 (new-market-types) — EXECUTING
-Plan: 2 of 7
+Plan: 3 of 7
 Status: Ready to execute
 Last activity: 2026-07-15 — Phase 03 execution started
 
@@ -70,6 +70,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 02 P06 | 9min | 2 tasks | 3 files |
 | Phase 02 P07 | 12min | 3 tasks | 3 files |
 | Phase 03 P01 | 10min | 2 tasks | 2 files |
+| Phase 03 P02 | 15min | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -129,6 +130,8 @@ Recent decisions affecting current work:
 - [Phase ?]: Phase 2 P05: relatedId for wager.cashed_out is evt.cashoutId (the wager_cashouts row's own globally-unique id), never evt.wagerId -- a wager can be cashed out more than once, and reusing wagerId would collide with the existing UNIQUE(user_id, type, related_entity, related_id) constraint on the second cashout, silently losing that notification to the pre-existing 23505-catch-as-no-op idempotency logic (RESEARCH.md Pitfall 3).
 - [Phase ?]: Phase 2 P07: Compensating verification for the concurrency/idempotency/audit test suite used a purpose-built mock-backed dry run that fakes only src/config/database.js's transaction()/query() exports (via require.cache injection), leaving every repository and wagerService.cashoutWager itself as the real, unmodified committed source -- genuinely exercises FOR UPDATE row-lock serialization ordering and 23505 idempotency-collision branching, not just happy-path logic.
 - [Phase 03 P01]: seedOpenMarket()/seedWager() branch internally so default-argument calls emit byte-identical SQL to the pre-existing queries, letting Phase 1/2 tests run without applying migration 005 — Plan's own done-criteria required literal byte-identical default-arg SQL, not just semantic equivalence, so existing binary-market tests against a DB that hasn't run applyMarketTypesMigration() keep passing
+- [Phase ?]: Phase 3 P02: marketRepository.create's SQL text always includes market_type/threshold columns (not conditionally branched) -- binary-caller behavior/row shape stays the same via defaults ('binary'/null), satisfying MARKET-03 at the behavioral level rather than via a byte-identical query string.
+- [Phase ?]: Phase 3 P02: wagerRepository.create derives choice as (optionId ? null : choice) internally, so existing binary call sites need zero changes -- optionId defaults to null, making the ternary a no-op.
 
 ### Pending Todos
 
@@ -162,7 +165,7 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-07-15T01:58:47.822Z
-Stopped at: Completed 03-01-PLAN.md
+Last session: 2026-07-15T02:17:15.505Z
+Stopped at: Completed 03-02-PLAN.md
 Resume file: 
 None

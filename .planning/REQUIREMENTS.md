@@ -41,7 +41,7 @@ Requirements for this milestone. Each maps to a roadmap phase. Build order: NOTI
 - [ ] **MARKET-04**: All market-type and option validation happens server-side (option count, threshold format, duplicate options, etc.)
 - [ ] **MARKET-05**: Option/outcome count is bounded server-side to prevent unbounded-list DoS; UI limits alone are not sufficient
 - [x] **MARKET-06**: Option IDs are scoped to their parent market server-side (no IDOR — a wager can't reference an option belonging to a different market)
-- [ ] **MARKET-07**: Payout/resolution logic is generalized to N outcomes (works for binary, Over/Under, and multiple-choice through the same resolution path where practical)
+- [x] **MARKET-07**: Payout/resolution logic is generalized to N outcomes (works for binary, Over/Under, and multiple-choice through the same resolution path where practical)
 - [ ] **MARKET-08**: Admin panel UI supports creating both new market types (per requisitos.txt's explicit requirement), not API-only
 
 ### Bet Cancellation v2 (CANCEL)
@@ -111,7 +111,7 @@ Deferred to future release. Tracked but not in current roadmap.
 | MARKET-04 | Phase 3 | Pending |
 | MARKET-05 | Phase 3 | Pending |
 | MARKET-06 | Phase 3 | Complete |
-| MARKET-07 | Phase 3 | Pending |
+| MARKET-07 | Phase 3 | Complete |
 | MARKET-08 | Phase 3 | Pending |
 | CANCEL-01 | Phase 4 | Pending |
 | CANCEL-02 | Phase 4 | Pending |
