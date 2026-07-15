@@ -442,6 +442,7 @@ td.mono { font-family: var(--font-mono); }
 }
 
 .odd-btn.option .value { color: var(--text); }
+.odd-btn.option.selected { border-color: var(--sim); background: rgba(198,255,61,0.08); }
 
 .odds-row.multi { flex-wrap: wrap; }
 .odds-row.multi .odd-btn.option { flex: 1 1 120px; min-width: 120px; }
