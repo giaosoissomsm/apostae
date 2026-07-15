@@ -150,9 +150,13 @@ class MarketService {
 
     if (marketType === 'over_under') {
       const { threshold, odds_over, odds_under } = body || {};
-      thresholdNum = Number(threshold);
-      if (!Number.isFinite(thresholdNum) || thresholdNum <= 0) {
-        throw new ValidationError('Limite (threshold) inválido. Informe um número maior que zero.');
+      // Arredondado pra 2 casas decimais antes de qualquer uso (rótulo e
+      // valor persistido), já que markets.threshold é NUMERIC(10,2) - sem
+      // isso, um threshold com mais de 2 casas (ou artefato de float IEEE-754)
+      // gera um rótulo que diverge do valor efetivamente gravado no banco.
+      thresholdNum = Math.round(Number(threshold) * 100) / 100;
+      if (!Number.isFinite(thresholdNum) || thresholdNum <= 0 || thresholdNum > 999999.99) {
+        throw new ValidationError('Limite (threshold) inválido. Informe um número maior que zero e até 999999.99.');
       }
       if (!isValidOdds(Number(odds_over)) || !isValidOdds(Number(odds_under))) {
         throw new ValidationError('Odds inválidas. Use valores entre 1.01 e 1000.');
