@@ -134,6 +134,36 @@ const setUserRole = catchAsync(async (req, res) => {
 });
 
 /**
+ * POST /api/users/:id/balance - Ajusta saldo do usuário (admin)
+ */
+const adjustUserBalance = catchAsync(async (req, res) => {
+  const { type, amount, description } = req.body;
+
+  if (type !== 'credit' && type !== 'debit') {
+    throw new ValidationError("type deve ser 'credit' ou 'debit'");
+  }
+
+  if (typeof amount !== 'number' || !Number.isFinite(amount) || amount <= 0) {
+    throw new ValidationError('amount deve ser um número positivo');
+  }
+
+  if (!description || typeof description !== 'string' || description.trim().length === 0) {
+    throw new ValidationError('description é obrigatório');
+  }
+
+  const result = await userService.adjustUserBalance(
+    parseInt(req.params.id, 10),
+    type,
+    amount,
+    description,
+    req.user.id,
+    req.ip
+  );
+
+  res.json(result);
+});
+
+/**
  * DELETE /api/users/:id - Deleta usuário
  */
 const deleteUser = catchAsync(async (req, res) => {
@@ -178,6 +208,7 @@ module.exports = {
   searchUsers,
   setUserStatus,
   setUserRole,
+  adjustUserBalance,
   deleteUser,
   getUserStats,
   getAuditLogs,
