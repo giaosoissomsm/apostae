@@ -6,14 +6,14 @@ current_phase: 03
 current_phase_name: new-market-types
 status: executing
 stopped_at: Completed 03-02-PLAN.md
-last_updated: "2026-07-15T03:42:02.069Z"
+last_updated: "2026-07-15T03:51:15.640Z"
 last_activity: 2026-07-15
 last_activity_desc: Phase 03 execution started
 progress:
   total_phases: 4
   completed_phases: 2
   total_plans: 18
-  completed_plans: 16
+  completed_plans: 17
   percent: 50
 ---
 
@@ -32,7 +32,7 @@ transactions, even under concurrent access.
 ## Current Position
 
 Phase: 03 (new-market-types) — EXECUTING
-Plan: 6 of 7
+Plan: 7 of 7
 Status: Ready to execute
 Last activity: 2026-07-15 — Phase 03 execution started
 
@@ -74,6 +74,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 03 P03 | 20min | 2 tasks | 5 files |
 | Phase 03 P04 | 15min | 2 tasks | 2 files |
 | Phase 03 P05 | 20min | 3 tasks | 3 files |
+| Phase 03 P06 | 12min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -142,6 +143,8 @@ Recent decisions affecting current work:
 - [Phase ?]: Phase 3 P05: market_type-dependent resolveMarket validation (outcome vs winning_option_id) deferred inside the transaction after the market row is locked, mirroring the 03-04 placeWager precedent -- the type is only known after the FOR UPDATE lock, so validating before that point isn't meaningful.
 - [Phase ?]: Phase 3 P05: market.resolved event emits the winning option's label (not raw option_id) for over_under/multiple_choice, resolved via the same IDOR-safe findByIdForMarket lookup already performed for the payout branch -- binary keeps emitting the unchanged raw 'yes'/'no' value; notificationService.js needed no change.
 - [Phase ?]: Phase 3 P05: mandatory completeness audit (grep .choice / odds_yes|odds_no / cashed_out_amount across src/) confirmed no unbranched binary assumption remains in any money/resolution/refund path -- cancelWager and deleteMarket's Phase 2 CR-02/CR-03 fixes remain correct as-is (never referenced wager.choice), no additional fix required beyond resolveMarket's own generalization.
+- [Phase ?]: Phase 3 P06: Fieldset visibility toggled via inline style.display ('contents' for the visible one, 'none' for the other two) rather than a CSS class -- preserves the binary fieldset's pixel-identical layout inside the shared .grid-2 grid while allowing exactly one fieldset to be shown/hidden as a unit.
+- [Phase ?]: Phase 3 P06: oddsCell()/resultLabel()/actionsCell() binary branches use the exact original expressions rather than a shared/generalized code path, per UI-SPEC's explicit regression-guard instruction against one shared template changing binary's markup as a side effect of generalizing Over/Under and multiple-choice.
 
 ### Pending Todos
 
@@ -175,7 +178,7 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-07-15T03:40:41.099Z
+Last session: 2026-07-15T03:50:23.102Z
 Stopped at: Completed 03-02-PLAN.md
 Resume file: 
 None
