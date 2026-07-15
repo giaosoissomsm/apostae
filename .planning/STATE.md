@@ -2,18 +2,18 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-current_phase: 02
-current_phase_name: partial-cashout
-status: verifying
-stopped_at: Completed 02-07-PLAN.md
-last_updated: "2026-07-14T18:02:32.603Z"
-last_activity: 2026-07-14
-last_activity_desc: Phase 02 execution started
+current_phase: 03
+current_phase_name: new-market-types
+status: executing
+stopped_at: Completed 03-01-PLAN.md
+last_updated: "2026-07-15T01:58:47.834Z"
+last_activity: 2026-07-15
+last_activity_desc: Phase 03 execution started
 progress:
   total_phases: 4
   completed_phases: 2
-  total_plans: 11
-  completed_plans: 11
+  total_plans: 18
+  completed_plans: 12
   percent: 50
 ---
 
@@ -27,14 +27,14 @@ See: .planning/PROJECT.md (updated 2026-07-13)
 correct and auditable — a user's balance must never diverge from the sum of their recorded
 transactions, even under concurrent access.
 
-**Current focus:** Phase 02 — partial-cashout
+**Current focus:** Phase 03 — new-market-types
 
 ## Current Position
 
-Phase: 02 (partial-cashout) — EXECUTING
-Plan: 7 of 7
-Status: Phase complete — ready for verification
-Last activity: 2026-07-14 — Phase 02 execution started
+Phase: 03 (new-market-types) — EXECUTING
+Plan: 2 of 7
+Status: Ready to execute
+Last activity: 2026-07-15 — Phase 03 execution started
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -69,6 +69,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 02 P05 | 8min | 2 tasks | 2 files |
 | Phase 02 P06 | 9min | 2 tasks | 3 files |
 | Phase 02 P07 | 12min | 3 tasks | 3 files |
+| Phase 03 P01 | 10min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -127,6 +128,7 @@ Recent decisions affecting current work:
 - [Phase 02]: Phase 2 P04: domainEvents.emit('wager.cashed_out', ...) fires unconditionally after transaction() resolves, including on the idempotent-replay branch -- matches the existing emit-is-best-effort/consumer-owns-dedup convention. — Consistent with notificationService's own idempotency handling; avoids adding special-case branching in the service layer.
 - [Phase ?]: Phase 2 P05: relatedId for wager.cashed_out is evt.cashoutId (the wager_cashouts row's own globally-unique id), never evt.wagerId -- a wager can be cashed out more than once, and reusing wagerId would collide with the existing UNIQUE(user_id, type, related_entity, related_id) constraint on the second cashout, silently losing that notification to the pre-existing 23505-catch-as-no-op idempotency logic (RESEARCH.md Pitfall 3).
 - [Phase ?]: Phase 2 P07: Compensating verification for the concurrency/idempotency/audit test suite used a purpose-built mock-backed dry run that fakes only src/config/database.js's transaction()/query() exports (via require.cache injection), leaving every repository and wagerService.cashoutWager itself as the real, unmodified committed source -- genuinely exercises FOR UPDATE row-lock serialization ordering and 23505 idempotency-collision branching, not just happy-path logic.
+- [Phase 03 P01]: seedOpenMarket()/seedWager() branch internally so default-argument calls emit byte-identical SQL to the pre-existing queries, letting Phase 1/2 tests run without applying migration 005 — Plan's own done-criteria required literal byte-identical default-arg SQL, not just semantic equivalence, so existing binary-market tests against a DB that hasn't run applyMarketTypesMigration() keep passing
 
 ### Pending Todos
 
@@ -160,7 +162,7 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-07-14T18:02:32.592Z
-Stopped at: Completed 02-07-PLAN.md
+Last session: 2026-07-15T01:58:47.822Z
+Stopped at: Completed 03-01-PLAN.md
 Resume file: 
 None
