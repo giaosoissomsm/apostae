@@ -3,7 +3,7 @@
   const user = Api.getUser();
   const token = Api.getToken();
   if (!user || !token || !user.password_expires_next_login) {
-    location.href = '/index.html';
+    location.href = '/';
     return;
   }
 
@@ -34,7 +34,7 @@
       // Limpa sessão local e redireciona pra login
       setTimeout(() => {
         Api.clearSession();
-        location.href = '/login.html';
+        location.href = '/login';
       }, 1500);
     } catch (err) {
       msgBox.innerHTML = `<div class="error-msg">${err.message}</div>`;

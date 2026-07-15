@@ -34,6 +34,14 @@ async function requireAuth(req, res, next) {
       throw new AuthenticationError('Sessão expirada ou invalidada');
     }
 
+    // Teto absoluto: mesmo com atividade contínua, a sessão não pode
+    // durar mais que SESSION_ABSOLUTE_TIMEOUT desde o login.
+    const sessionAge = Date.now() - (sessionData.createdAt || 0);
+    if (!sessionData.createdAt || sessionAge > env.SESSION_ABSOLUTE_TIMEOUT) {
+      await redis.del(`session:${sessionId}`);
+      throw new AuthenticationError('Sessão expirada: tempo máximo de sessão atingido');
+    }
+
     // Busca usuário no banco (valida que não foi desativado/deletado)
     const userResult = await query(
       `SELECT id, username, email, role_id, is_active, password_expires_next_login
@@ -52,9 +60,9 @@ async function requireAuth(req, res, next) {
     }
 
     // Bloqueia se precisa mudar senha (exceto rotas específicas)
-    const isPasswordChangeRoute = 
+    const isPasswordChangeRoute =
       req.path === '/api/auth/change-password-required' ||
-      req.path === '/password-expires.html';
+      req.path === '/password-expires';
 
     if (user.password_expires_next_login && !isPasswordChangeRoute) {
       return res.status(403).json({
@@ -63,11 +71,19 @@ async function requireAuth(req, res, next) {
       });
     }
 
-    // Atualiza atividade no Redis
-    await redis.setex(`session:${sessionId}`, 1800, JSON.stringify({
+    // Guarda o TTL restante antes de renovar (usado por /sessions/current)
+    req.sessionTtl = await redis.ttl(`session:${sessionId}`);
+    req.sessionAbsoluteRemaining = Math.max(
+      0,
+      Math.floor((env.SESSION_ABSOLUTE_TIMEOUT - sessionAge) / 1000)
+    );
+
+    // Atualiza atividade no Redis (janela de inatividade), preservando createdAt
+    await redis.setex(`session:${sessionId}`, env.SESSION_TIMEOUT / 1000, JSON.stringify({
       userId: user.id,
       username: user.username,
       roleId: user.role_id,
+      createdAt: sessionData.createdAt,
     }));
 
     // Anexa ao request

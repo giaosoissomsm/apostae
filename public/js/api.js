@@ -31,15 +31,15 @@ const Api = (() => {
 
     if (res.status === 401) {
       clearSession();
-      if (!location.pathname.endsWith('login.html') && !location.pathname.endsWith('password-expires.html')) {
-        location.href = '/login.html';
+      if (location.pathname !== '/login' && location.pathname !== '/password-expires') {
+        location.href = '/login';
       }
       throw new Error((data && data.error) || 'Sessão expirada.');
     }
 
     if (res.status === 403) {
       if (data && data.error === 'password_expires_next_login') {
-        location.href = '/password-expires.html';
+        location.href = '/password-expires';
         throw new Error(data.message || 'Você precisa alterar sua senha.');
       }
     }
@@ -62,7 +62,7 @@ const Api = (() => {
 
 function requireLogin() {
   if (!Api.getToken()) {
-    location.href = '/login.html';
+    location.href = '/login';
     return null;
   }
   return Api.getUser();
@@ -78,7 +78,7 @@ function requireAdminPage() {
   
   if (!isAdmin) {
     console.error('User is not admin:', user);
-    location.href = '/index.html';
+    location.href = '/';
     return null;
   }
   return user;
@@ -105,7 +105,7 @@ function logout() {
   }).finally(() => {
     // De qualquer forma, limpa o frontend e redireciona
     Api.clearSession();
-    location.href = '/login.html';
+    location.href = '/login';
   });
 }
 
