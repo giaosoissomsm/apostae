@@ -1,12 +1,14 @@
-// Requisito coberto: 02-REVIEW.md CR-02 — wagerService.cancelWager() reembolsa
-// só a fração AINDA presa na aposta (amount - cashed_out_amount), nunca o
-// wager.amount original incondicional. Uma aposta com cashout parcial prévio
-// continua com status 'pending' (cashout nunca muda o status da aposta), então
-// nada além desta correção impedia um usuário de sacar parte do valor via
-// cashout e depois cancelar o restante recebendo o wager.amount INTEIRO de
-// volta — um pagamento duplicado sobre a mesma stake (mesma classe de bug de
-// RESEARCH.md Pitfall 2, já corrigida em resolveMarket). Segue o mesmo
-// precedente de setup de tests/cashout.resolution-integration.test.js: usamos
+// Requisito coberto: Fase 4 (CANCEL-01/02/03/05/06) — wagerService.cancelWager()
+// agora cobra uma taxa de CANCEL_FEE_PERCENT (5% por padrão) sobre a stake
+// restante e reembolsa o líquido (95%), E bloqueia CANCELAMENTO TOTALMENTE
+// se qualquer cashout já tiver ocorrido na aposta (cashed_out_amount > 0),
+// substituindo o antigo comportamento de netting parcial (02-REVIEW.md
+// CR-02) que reduzia o reembolso mas nunca bloqueava. Decisão confirmada
+// pelo dono do projeto (STATE.md Fase 4): não existe mais cancelamento
+// parcial pós-cashout nesta milestone — o caminho de netting descrito em
+// CANCEL-03 é uma fórmula defensiva inalcançável na prática, dado o
+// bloqueio. Segue o mesmo precedente de setup de
+// tests/cashout.resolution-integration.test.js: usamos
 // seedWager({ cashedOutAmount }) pra semear uma aposta com cashout prévio SEM
 // depender do caminho de escrita de cashout em si (que não é o alvo deste
 // teste — o alvo é cancelWager).
@@ -24,8 +26,9 @@ const {
 } = require('./helpers/testDb');
 const { query } = require('../src/config/database');
 const wagerService = require('../src/services/wagerService');
+const { ConflictError } = require('../src/utils/errors');
 
-describe('wagerService.cancelWager reembolsa apenas a fração restante pós-cashout (CR-02)', () => {
+describe('wagerService.cancelWager cobra 5% de taxa e bloqueia totalmente após cashout (Fase 4)', () => {
   let userId;
 
   beforeAll(async () => {
@@ -55,7 +58,7 @@ describe('wagerService.cancelWager reembolsa apenas a fração restante pós-cas
     return result.rows[0];
   }
 
-  test('regressão: aposta sem cashout prévio (cashed_out_amount = 0) é reembolsada no valor integral', async () => {
+  test('aposta sem cashout prévio (cashed_out_amount = 0) é reembolsada em 95% (5% de taxa retida)', async () => {
     await seedWallet(userId, 1000);
     const balanceBefore = await getWalletBalance(userId);
 
@@ -74,10 +77,11 @@ describe('wagerService.cancelWager reembolsa apenas a fração restante pós-cas
     await wait();
 
     const balanceAfter = await getWalletBalance(userId);
-    expect(balanceAfter - balanceBefore).toBe(100);
+    // 100 de stake, taxa de 5% (CANCEL_FEE_PERCENT padrão) => reembolso líquido de 95.
+    expect(balanceAfter - balanceBefore).toBe(95);
 
     const txn = await getLatestWalletTransaction(userId);
-    expect(Number(txn.amount)).toBe(100);
+    expect(Number(txn.amount)).toBe(95);
     expect(txn.related_entity).toBe('wager');
     expect(txn.type).toBe('refund');
 
@@ -85,7 +89,7 @@ describe('wagerService.cancelWager reembolsa apenas a fração restante pós-cas
     expect(wagerRow.rows[0].status).toBe('refunded');
   });
 
-  test('cashout parcial prévio: cancelamento reembolsa somente o restante (100 - 40 = 60), nunca o wager.amount integral', async () => {
+  test('cashout parcial prévio: cancelamento é BLOQUEADO totalmente (ConflictError), carteira e status inalterados', async () => {
     await seedWallet(userId, 1000);
     const balanceBefore = await getWalletBalance(userId);
 
@@ -100,20 +104,18 @@ describe('wagerService.cancelWager reembolsa apenas a fração restante pós-cas
       cashedOutAmount: 40,
     });
 
-    await wagerService.cancelWager(wagerId, userId);
+    // CANCEL-06: uma vez que cashed_out_amount > 0, cancelWager rejeita
+    // OUTRIGHT com ConflictError, antes de qualquer cálculo de reembolso —
+    // não existe mais um caminho de "reembolsa só o restante (60)".
+    await expect(wagerService.cancelWager(wagerId, userId)).rejects.toThrow(ConflictError);
     await wait();
 
     const balanceAfter = await getWalletBalance(userId);
-    // Nunca 100 — isso seria o double-pay do CR-02 (40 já saíram via cashout,
-    // então só os 60 restantes devem voltar pra carteira aqui).
-    expect(balanceAfter - balanceBefore).toBe(60);
-
-    const txn = await getLatestWalletTransaction(userId);
-    expect(Number(txn.amount)).toBe(60);
-    expect(txn.related_entity).toBe('wager');
-    expect(txn.type).toBe('refund');
+    // Carteira inalterada — nenhum reembolso (parcial ou total) ocorre no bloqueio.
+    expect(balanceAfter - balanceBefore).toBe(0);
 
     const wagerRow = await query('SELECT status FROM wagers WHERE id = $1;', [wagerId]);
-    expect(wagerRow.rows[0].status).toBe('refunded');
+    // Status permanece 'pending' — updateStatus nunca é chamado nesse caminho.
+    expect(wagerRow.rows[0].status).toBe('pending');
   });
 });
