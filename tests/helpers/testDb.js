@@ -131,11 +131,33 @@ async function applyCashoutMigration() {
 }
 
 /**
+ * Aplica a migration 005 (market_type/threshold/market_options/winning_option_id
+ * + wagers.option_id/XOR CHECK) no banco de teste. Mesmo formato de
+ * applyCashoutMigration/applyNotificationsMigration: carregada sob demanda
+ * (não no topo do arquivo, pra este helper parsear mesmo antes da migration
+ * 005 existir), roda cada string SQL do array `up` sequencialmente,
+ * idempotente (ADD COLUMN IF NOT EXISTS / CREATE TABLE IF NOT EXISTS).
+ */
+async function applyMarketTypesMigration() {
+  assertTestDatabase();
+  const marketTypesMigration = require('../../src/migrations/005_market_types');
+  for (const sql of marketTypesMigration.up) {
+    await query(sql);
+  }
+}
+
+/**
  * Insere um mercado aberto ('open') de teste e retorna o id. Reaproveita as
  * mesmas colunas que marketRepository.create grava (question, description,
  * odds_yes, odds_no, status, closes_at, reveal_at, scheduled_outcome,
  * created_by) — created_by exige um usuário existente (FK NOT NULL), então
  * o chamador deve passar um userId de um seedTestUser() anterior.
+ *
+ * `marketType` (default 'binary') e `threshold` (default null) são
+ * opcionais — quando omitidos, o INSERT é idêntico ao comportamento atual
+ * (regressão binária na camada de fixture, MARKET-03). Passar
+ * marketType='over_under'|'multiple_choice' pra semear os novos tipos;
+ * combine com seedMarketOptions() pra popular market_options.
  */
 async function seedOpenMarket({
   createdBy,
@@ -146,15 +168,59 @@ async function seedOpenMarket({
   closesAt = null,
   revealAt = null,
   scheduledOutcome = null,
+  marketType = 'binary',
+  threshold = null,
 } = {}) {
   assertTestDatabase();
+  if (marketType === 'binary' && threshold === null) {
+    // Caminho binário byte-idêntico ao INSERT anterior (MARKET-03) — não
+    // referencia market_type/threshold, então continua funcionando mesmo em
+    // bancos de teste que ainda não rodaram applyMarketTypesMigration().
+    const result = await query(
+      `INSERT INTO markets (question, description, odds_yes, odds_no, status, closes_at, reveal_at, scheduled_outcome, created_by)
+       VALUES ($1, $2, $3, $4, 'open', $5, $6, $7, $8)
+       RETURNING id;`,
+      [question, description, oddsYes, oddsNo, closesAt, revealAt, scheduledOutcome, createdBy]
+    );
+    return result.rows[0].id;
+  }
   const result = await query(
-    `INSERT INTO markets (question, description, odds_yes, odds_no, status, closes_at, reveal_at, scheduled_outcome, created_by)
-     VALUES ($1, $2, $3, $4, 'open', $5, $6, $7, $8)
+    `INSERT INTO markets (question, description, odds_yes, odds_no, status, closes_at, reveal_at, scheduled_outcome, created_by, market_type, threshold)
+     VALUES ($1, $2, $3, $4, 'open', $5, $6, $7, $8, $9, $10)
      RETURNING id;`,
-    [question, description, oddsYes, oddsNo, closesAt, revealAt, scheduledOutcome, createdBy]
+    [question, description, oddsYes, oddsNo, closesAt, revealAt, scheduledOutcome, createdBy, marketType, threshold]
   );
   return result.rows[0].id;
+}
+
+/**
+ * Insere N opções em market_options pro mercado informado, via um único
+ * INSERT multi-linha parametrizado (nunca concatena labels em SQL —
+ * proteção contra injeção, RESEARCH.md Security Domain). Retorna as linhas
+ * inseridas (id, sort_order) na ordem de sort_order.
+ *
+ * `options` é um array de { label, odds, sortOrder }. sortOrder default é
+ * o índice do item no array, casando com a ordem de inserção quando o
+ * chamador não se importa com ordenação customizada.
+ */
+async function seedMarketOptions(marketId, options) {
+  assertTestDatabase();
+  const values = [];
+  const placeholders = options
+    .map((opt, i) => {
+      const base = i * 4;
+      values.push(marketId, opt.label, opt.odds, opt.sortOrder != null ? opt.sortOrder : i);
+      return `($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4})`;
+    })
+    .join(', ');
+  const result = await query(
+    `INSERT INTO market_options (market_id, label, odds, sort_order)
+     VALUES ${placeholders}
+     RETURNING id, sort_order
+     ORDER BY sort_order;`,
+    values
+  );
+  return result.rows;
 }
 
 /**
@@ -162,6 +228,11 @@ async function seedOpenMarket({
  * `cashedOutAmount` (default 0) pra permitir que o teste de integração de
  * resolução (Plan 04) semeie uma aposta com cashout prévio SEM depender do
  * caminho de escrita de cashout em si (que só existe a partir do Plan 02).
+ *
+ * `optionId` (default null) é opcional — quando omitido, o INSERT grava
+ * choice/option_id exatamente como hoje (regressão binária na camada de
+ * fixture, MARKET-03). Quando informado, grava choice=NULL/option_id=X,
+ * satisfazendo a CHECK XOR da migration 005.
  */
 async function seedWager({
   userId,
@@ -171,13 +242,26 @@ async function seedWager({
   oddsAtTime = 2.0,
   potentialPayout = 200,
   cashedOutAmount = 0,
+  optionId = null,
 }) {
   assertTestDatabase();
+  if (optionId === null) {
+    // Caminho binário byte-idêntico ao INSERT anterior (MARKET-03) — não
+    // referencia option_id, então continua funcionando mesmo em bancos de
+    // teste que ainda não rodaram applyMarketTypesMigration().
+    const result = await query(
+      `INSERT INTO wagers (user_id, market_id, choice, amount, odds_at_time, potential_payout, status, cashed_out_amount)
+       VALUES ($1, $2, $3, $4, $5, $6, 'pending', $7)
+       RETURNING id;`,
+      [userId, marketId, choice, amount, oddsAtTime, potentialPayout, cashedOutAmount]
+    );
+    return result.rows[0].id;
+  }
   const result = await query(
-    `INSERT INTO wagers (user_id, market_id, choice, amount, odds_at_time, potential_payout, status, cashed_out_amount)
-     VALUES ($1, $2, $3, $4, $5, $6, 'pending', $7)
+    `INSERT INTO wagers (user_id, market_id, choice, option_id, amount, odds_at_time, potential_payout, status, cashed_out_amount)
+     VALUES ($1, $2, NULL, $3, $4, $5, $6, 'pending', $7)
      RETURNING id;`,
-    [userId, marketId, choice, amount, oddsAtTime, potentialPayout, cashedOutAmount]
+    [userId, marketId, optionId, amount, oddsAtTime, potentialPayout, cashedOutAmount]
   );
   return result.rows[0].id;
 }
@@ -205,9 +289,11 @@ module.exports = {
   applyBaseSchema,
   applyWalletSchema,
   applyCashoutMigration,
+  applyMarketTypesMigration,
   seedTestUser,
   seedWallet,
   seedOpenMarket,
+  seedMarketOptions,
   seedWager,
   truncateNotifications,
   wait,
