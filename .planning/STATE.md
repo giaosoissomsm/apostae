@@ -5,10 +5,10 @@ milestone_name: milestone
 current_phase: 04
 current_phase_name: bet-cancellation-v2
 status: verifying
-stopped_at: Completed 04-03-PLAN.md
-last_updated: "2026-07-15T05:11:54.838Z"
+stopped_at: "Completed quick task 260715-f42: remove .html URLs, keep clean extensionless routes"
+last_updated: "2026-07-15T14:14:18.252Z"
 last_activity: 2026-07-15
-last_activity_desc: Phase 04 execution started
+last_activity_desc: "Completed quick task 260715-f42: Remove .html extensions from all public URLs (verified)"
 progress:
   total_phases: 4
   completed_phases: 4
@@ -34,7 +34,7 @@ transactions, even under concurrent access.
 Phase: 04 (bet-cancellation-v2) — EXECUTING
 Plan: 3 of 3
 Status: Phase complete — ready for verification
-Last activity: 2026-07-15 - Completed quick task 260715-emb: Remove the guard in marketService.deleteMarket blocking deletion of resolved markets
+Last activity: 2026-07-15 - Completed quick task 260715-f42: Remove .html extensions from all public URLs (verified)
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -167,6 +167,7 @@ Recent decisions affecting current work:
 - [Phase ?]: Phase 4 P02: mock-backed dry run (deleted before commit, fakes only src/config/database.js query()/transaction() exports) verified all 23 assertions in the three new cancel.*.test.js files against the real unmodified cancelWager, since no live *test*-named Postgres is reachable in this sandbox (4th consecutive phase with this blocker).
 - [Phase ?]: Phase 4 P03: mock-backed dry run for CANCEL-07 used a genuine async-mutex row-lock emulator (not a sequential fake) so Promise.allSettled races actually contend for market/wager/wallet locks — run under both array orderings to exercise both branches of the tolerant race assertions, since no live *test*-named Postgres is reachable in this sandbox (5th consecutive phase with this blocker).
 - [Phase ?]: Phase 4 P03: cancel.tampering.test.js splits into two describe blocks (DB-dependent IDOR test vs. no-beforeAll static structural checks) so a test-DB outage never masks the static tests' own pass/fail signal — verified live that the split works as intended in this sandbox (2 static tests genuinely passed, only the IDOR test failed on the expected DB-connectivity error).
+- [Phase quick-260715-f42]: /admin now correctly serves admin.html (fixed pre-existing bug where it served the index/dashboard shell); all public URLs lost their .html extension with 301 redirects preserving query strings; login canonical is /login not /cadastro since both serve identical markup
 
 ### Pending Todos
 
@@ -194,9 +195,10 @@ None yet.
 
 ### Quick Tasks Completed
 
-| # | Description | Date | Commit | Directory |
-|---|-------------|------|--------|-----------|
-| 260715-emb | Remove the guard in marketService.deleteMarket blocking deletion of resolved markets — explicit product-owner reversal of Phase 1 CR-01, accepting that wagers.market_id's ON DELETE CASCADE will now cascade-delete settled wagers | 2026-07-15 | b34bb9e | [260715-emb-remove-the-guard-in-marketservice-delete](./quick/260715-emb-remove-the-guard-in-marketservice-delete/) |
+| # | Description | Date | Commit | Status | Directory |
+|---|-------------|------|--------|--------|-----------|
+| 260715-emb | Remove the guard in marketService.deleteMarket blocking deletion of resolved markets — explicit product-owner reversal of Phase 1 CR-01, accepting that wagers.market_id's ON DELETE CASCADE will now cascade-delete settled wagers | 2026-07-15 | b34bb9e | | [260715-emb-remove-the-guard-in-marketservice-delete](./quick/260715-emb-remove-the-guard-in-marketservice-delete/) |
+| 260715-f42 | Remove .html extensions from all public URLs (301 redirects preserving query strings, all internal nav references updated to clean paths); also fixed pre-existing bug where /admin served the dashboard shell instead of the admin panel | 2026-07-15 | 5127ff0 | Verified | [260715-f42-remover-urls-com-html-mantendo-total-com](./quick/260715-f42-remover-urls-com-html-mantendo-total-com/) |
 
 ## Deferred Items
 
@@ -208,6 +210,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-07-15T05:11:54.825Z
-Stopped at: Completed 04-03-PLAN.md
+Last session: 2026-07-15T14:14:18.239Z
+Stopped at: Completed quick task 260715-f42: remove .html URLs, keep clean extensionless routes
 Resume file: 
