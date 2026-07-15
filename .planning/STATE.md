@@ -34,7 +34,7 @@ transactions, even under concurrent access.
 Phase: 04 (bet-cancellation-v2) — EXECUTING
 Plan: 3 of 3
 Status: Phase complete — ready for verification
-Last activity: 2026-07-15 - Completed quick task 260715-f42: Remove .html extensions from all public URLs (verified)
+Last activity: 2026-07-15 - Completed quick task 260715-g0v: Atualizar .gitignore para proteger .env* e commitar mudancas pendentes (push bloqueado — sem credenciais)
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -199,6 +199,7 @@ None yet.
 |---|-------------|------|--------|--------|-----------|
 | 260715-emb | Remove the guard in marketService.deleteMarket blocking deletion of resolved markets — explicit product-owner reversal of Phase 1 CR-01, accepting that wagers.market_id's ON DELETE CASCADE will now cascade-delete settled wagers | 2026-07-15 | b34bb9e | | [260715-emb-remove-the-guard-in-marketservice-delete](./quick/260715-emb-remove-the-guard-in-marketservice-delete/) |
 | 260715-f42 | Remove .html extensions from all public URLs (301 redirects preserving query strings, all internal nav references updated to clean paths); also fixed pre-existing bug where /admin served the dashboard shell instead of the admin panel | 2026-07-15 | 5127ff0 | Verified | [260715-f42-remover-urls-com-html-mantendo-total-com](./quick/260715-f42-remover-urls-com-html-mantendo-total-com/) |
+| 260715-g0v | Atualizar .gitignore para proteger arquivos .env* (evitar commit acidental de .env.production) e commitar mudancas pendentes (config, controllers, routes, services, scheduler, sessions/leaderboard/markets); version bump para 5.0.0; push para origin/main bloqueado por falta de credenciais no ambiente | 2026-07-15 | 8ab0425 | Needs Review | [260715-g0v-atualizar-gitignore-para-proteger-arquiv](./quick/260715-g0v-atualizar-gitignore-para-proteger-arquiv/) |
 
 ## Deferred Items
 
