@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/css/style.css" />
+<link rel="canonical" href="/" />
 </head>
 <body>
   <div class="topbar">
@@ -15,8 +16,8 @@
       <a href="#" class="tab-link active" data-tab="markets">Mercados</a>
       <a href="#" class="tab-link" data-tab="mine">Minhas fichas</a>
       <a href="#" class="tab-link" data-tab="ranking">Ranking</a>
-      <a href="/admin.html" id="adminLink" style="display:none;">Admin</a>
-      <a href="/profile.html">Perfil</a>
+      <a href="/admin" id="adminLink" style="display:none;">Admin</a>
+      <a href="/profile">Perfil</a>
     </nav>
     <div style="display:flex; align-items:center; gap:10px;">
       <div class="credits-pill">💰 <span class="amount" id="creditsAmount">--</span></div>
@@ -44,12 +45,14 @@
         <p>Histórico de tudo que você já apostou por aqui.</p>
       </div>
       <div class="panel">
-        <table>
-          <thead>
-            <tr><th>Mercado</th><th>Lado</th><th>Valor</th><th>Odd</th><th>Retorno possível</th><th>Status</th><th></th></tr>
-          </thead>
-          <tbody id="myWagersBody"></tbody>
-        </table>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Mercado</th><th>Lado</th><th>Valor</th><th>Odd</th><th>Retorno possível</th><th>Status</th><th></th></tr>
+            </thead>
+            <tbody id="myWagersBody"></tbody>
+          </table>
+        </div>
       </div>
     </section>
 
@@ -59,10 +62,12 @@
         <p>Quem tá rico e quem tá quebrado no grupo.</p>
       </div>
       <div class="panel">
-        <table>
-          <thead><tr><th>#</th><th>Usuário</th><th>Créditos</th><th></th></tr></thead>
-          <tbody id="rankingBody"></tbody>
-        </table>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>#</th><th>Usuário</th><th>Créditos</th><th></th></tr></thead>
+            <tbody id="rankingBody"></tbody>
+          </table>
+        </div>
       </div>
     </section>
   </main>

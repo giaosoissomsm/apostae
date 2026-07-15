@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/css/style.css" />
+<link rel="canonical" href="/login" />
 </head>
 <body>
   <div class="auth-wrap">
@@ -46,7 +47,7 @@
     const switchBtn = document.getElementById('switchBtn');
     const msgBox = document.getElementById('msgBox');
 
-    if (Api.getToken()) location.href = '/index.html';
+    if (Api.getToken()) location.href = '/';
 
     switchBtn.addEventListener('click', () => {
       mode = mode === 'login' ? 'register' : 'login';
@@ -77,7 +78,7 @@
         const path = mode === 'login' ? '/auth/login' : '/auth/register';
         const data = await Api.post(path, { username, password });
         Api.setSession(data.token, data.user);
-        location.href = '/index.html';
+        location.href = '/';
       } catch (err) {
         msgBox.innerHTML = `<div class="error-msg">${err.message}</div>`;
       } finally {
