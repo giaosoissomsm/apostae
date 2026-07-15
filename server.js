@@ -94,12 +94,46 @@ app.use('/api/notifications', notificationsRoutes);
 // FRONTEND ESTÁTICO
 // ============================================================================
 
-app.use(express.static(path.join(__dirname, 'public')));
+// Mapa de páginas legadas (.html) para suas URLs limpas equivalentes.
+const LEGACY_TO_CLEAN = {
+  '/index.html': '/',
+  '/login.html': '/login',
+  '/admin.html': '/admin',
+  '/profile.html': '/profile',
+  '/password-expires.html': '/password-expires',
+};
 
-// Serve index.html para SPA (client-side routing)
-app.get(['/', '/dashboard', '/admin', '/profile'], (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+// Redireciona permanentemente (301) qualquer URL legada terminada em .html
+// para sua versão limpa equivalente, preservando a query string verbatim.
+// Precisa ficar ANTES do express.static, senão o arquivo estático é servido
+// com 200 e o redirect nunca dispara. Fragmentos (#...) são só do navegador
+// e nunca chegam ao servidor, então não precisam de tratamento aqui.
+app.get(/\.html$/i, (req, res, next) => {
+  const target = LEGACY_TO_CLEAN[req.path];
+  if (!target) return next();
+  const qs = req.originalUrl.slice(req.path.length);
+  res.redirect(301, target + qs);
 });
+
+// { index: false } pra express.static nunca servir o index.html sozinho em
+// '/' — a rota explícita abaixo é a única dona de '/'.
+app.use(express.static(path.join(__dirname, 'public'), { index: false }));
+
+// Mapa de URLs limpas para os arquivos estáticos que elas servem.
+const CLEAN_TO_FILE = {
+  '/': 'index.html',
+  '/login': 'login.html',
+  '/cadastro': 'login.html', // cadastro é um toggle na própria página de login, sem arquivo próprio
+  '/admin': 'admin.html',
+  '/profile': 'profile.html',
+  '/password-expires': 'password-expires.html',
+};
+
+for (const [route, file] of Object.entries(CLEAN_TO_FILE)) {
+  app.get(route, (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', file));
+  });
+}
 
 // ============================================================================
 // TRATAMENTO DE ERROS
