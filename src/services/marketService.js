@@ -368,9 +368,10 @@ class MarketService {
       const marketResult = await client.query('SELECT * FROM markets WHERE id = $1 FOR UPDATE;', [marketId]);
       const market = marketResult.rows[0];
       if (!market) throw new NotFoundError('Mercado não encontrado.');
-      if (market.status === 'resolved') {
-        throw new ConflictError('Não é possível deletar um mercado já resolvido.');
-      }
+      // Mercados resolvidos PODEM ser deletados por decisão explícita do dono
+      // do produto (reversão consciente do CR-01, commit 48fddc2). wagers.market_id
+      // é ON DELETE CASCADE, então deletar aqui cascateia (remove) as apostas já
+      // liquidadas desse mercado — comportamento intencional, não um bug.
 
       const pendingWagers = await wagerRepository.findPendingByMarket(marketId, client);
       // Coletado aqui (dados já lidos na transação) pra emitir depois do
