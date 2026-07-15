@@ -112,10 +112,13 @@ class WagerService {
   // Pitfall 2). Bloqueio TOTAL se qualquer cashout já ocorreu — não é mais
   // um netting parcial (CANCEL-06, decisão do dono do projeto em STATE.md).
   async cancelWager(wagerId, userId) {
+    const wagerIdNum = Number(wagerId);
+    if (!Number.isFinite(wagerIdNum)) throw new ValidationError('Aposta inválida.');
+
     const result = await transaction(async (client) => {
       // Peek não travado — só pra descobrir qual mercado travar. market_id
       // nunca muda numa aposta existente, então isso não é um risco de TOCTOU.
-      const peek = await client.query('SELECT market_id FROM wagers WHERE id = $1;', [wagerId]);
+      const peek = await client.query('SELECT market_id FROM wagers WHERE id = $1;', [wagerIdNum]);
       if (!peek.rows[0]) throw new NotFoundError('Aposta não encontrada.');
 
       // ORDEM DE LOCK: mercado PRIMEIRO (igual placeWager/cashoutWager/resolveMarket/deleteMarket).
@@ -131,7 +134,7 @@ class WagerService {
       // (IDOR-safe — ver findByIdForUpdate). Retorna null tanto pra aposta
       // inexistente quanto pra aposta de outro usuário: sempre 404, nunca
       // 403 (não vaza existência pra quem não é dono).
-      const wager = await wagerRepository.findByIdForUpdate(wagerId, market.id, userId, client);
+      const wager = await wagerRepository.findByIdForUpdate(wagerIdNum, market.id, userId, client);
       if (!wager) throw new NotFoundError('Aposta não encontrada.');
       if (wager.status !== 'pending') throw new ConflictError('Essa aposta não pode mais ser cancelada.');
 
@@ -152,7 +155,7 @@ class WagerService {
       const remainingStake = Number(wager.amount) - Number(wager.cashed_out_amount);
       const { fee, net } = money.applyFeePercent(remainingStake, env.CANCEL_FEE_PERCENT);
 
-      await wagerRepository.updateStatus(wagerId, 'refunded', client); // reutiliza status existente -> UI já exibe "Cancelada"
+      await wagerRepository.updateStatus(wagerIdNum, 'refunded', client); // reutiliza status existente -> UI já exibe "Cancelada"
 
       // ORDEM DE LOCK: carteira TERCEIRA.
       const wallet = await walletRepository.findByUserIdForUpdate(userId, client);
@@ -175,16 +178,16 @@ class WagerService {
     // Emitido só depois do commit (D-01): um rollback nunca deve deixar um
     // evento "fantasma" sem linha correspondente no banco.
     domainEvents.emit('wager.cancelled', {
-      wagerId,
+      wagerId: wagerIdNum,
       userId,
       marketId: result.marketId,
       question: result.question,
-      amount: result.netAmount, // preserva a semântica já existente de evt.amount lida por notificationService.js
+      netAmount: result.netAmount,
       grossAmount: result.grossAmount,
       feeAmount: result.feeAmount,
     });
 
-    logger.info(`Usuário ${userId} cancelou a aposta #${wagerId} (taxa: R$${result.feeAmount.toFixed(2)})`);
+    logger.info(`Usuário ${userId} cancelou a aposta #${wagerIdNum} (taxa: R$${result.feeAmount.toFixed(2)})`);
     return { ok: true, refunded: result.netAmount, fee: result.feeAmount };
   }
 
@@ -197,6 +200,8 @@ class WagerService {
   // nunca reaplica o crédito na carteira nem o incremento de
   // cashed_out_amount (CASHOUT-07).
   async cashoutWager(wagerId, userId, { amount, idempotencyKey }) {
+    const wagerIdNum = Number(wagerId);
+    if (!Number.isFinite(wagerIdNum)) throw new ValidationError('Aposta inválida.');
     const requestedStake = Number(amount);
     if (!Number.isFinite(requestedStake) || requestedStake <= 0) {
       throw new ValidationError('Valor do cashout precisa ser maior que zero.');
@@ -217,7 +222,7 @@ class WagerService {
     const result = await transaction(async (client) => {
       // Peek não travado — só pra descobrir qual mercado travar. market_id
       // nunca muda numa aposta existente, então isso não é um risco de TOCTOU.
-      const peek = await client.query('SELECT market_id FROM wagers WHERE id = $1;', [wagerId]);
+      const peek = await client.query('SELECT market_id FROM wagers WHERE id = $1;', [wagerIdNum]);
       if (!peek.rows[0]) throw new NotFoundError('Aposta não encontrada.');
 
       // ORDEM DE LOCK: mercado PRIMEIRO (igual placeWager/resolveMarket/deleteMarket).
@@ -228,7 +233,7 @@ class WagerService {
 
       // ORDEM DE LOCK: aposta SEGUNDA. Posse + mercado embutidos no WHERE
       // (IDOR-safe — ver findByIdForUpdate).
-      const wager = await wagerRepository.findByIdForUpdate(wagerId, market.id, userId, client);
+      const wager = await wagerRepository.findByIdForUpdate(wagerIdNum, market.id, userId, client);
       if (!wager) throw new NotFoundError('Aposta não encontrada.');
       if (wager.status !== 'pending') {
         throw new ConflictError('Cashout indisponível: essa aposta já foi resolvida.');
@@ -259,7 +264,7 @@ class WagerService {
       try {
         cashout = await cashoutRepository.create(
           {
-            wagerId,
+            wagerId: wagerIdNum,
             userId,
             stakeCashedOut: requestedStake,
             grossValue: gross,
@@ -275,7 +280,7 @@ class WagerService {
           // resultado já existente, NÃO reaplica o crédito na carteira nem o
           // incremento de cashed_out_amount.
           await client.query('ROLLBACK TO SAVEPOINT cashout_insert');
-          cashout = await cashoutRepository.findByIdempotencyKey(wagerId, idempotencyKey, client);
+          cashout = await cashoutRepository.findByIdempotencyKey(wagerIdNum, idempotencyKey, client);
           isReplay = true;
         } else {
           throw err;
@@ -284,7 +289,7 @@ class WagerService {
 
       let remainingStakeAfter;
       if (!isReplay) {
-        await wagerRepository.incrementCashedOutAmount(wagerId, requestedStake, client);
+        await wagerRepository.incrementCashedOutAmount(wagerIdNum, requestedStake, client);
 
         // ORDEM DE LOCK: carteira TERCEIRA.
         const wallet = await walletRepository.findByUserIdForUpdate(userId, client);
@@ -299,7 +304,7 @@ class WagerService {
             balanceAfter: updated.balance,
             relatedEntity: 'cashout',
             relatedId: cashout.id,
-            description: `Cashout parcial da aposta #${wagerId}`,
+            description: `Cashout parcial da aposta #${wagerIdNum}`,
           },
           client
         );
@@ -311,7 +316,7 @@ class WagerService {
 
       return {
         cashout,
-        wagerId,
+        wagerId: wagerIdNum,
         marketId: market.id,
         userId,
         question: market.question,

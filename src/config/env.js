@@ -1,5 +1,16 @@
 require('dotenv').config();
 
+// parseFloat aceita lixo à direita silenciosamente (ex.: parseFloat('5%') === 5),
+// deixando passar despercebido um erro de digitação do operador exatamente no
+// tipo de valor que as checagens de CASHOUT_FEE_PERCENT/CANCEL_FEE_PERCENT abaixo
+// foram escritas pra pegar (ver 04-REVIEW.md WR-03). Só aceita um número decimal
+// puro (com sinal opcional) — qualquer outra coisa vira NaN e é rejeitada pelo
+// bounds check de cada env var.
+function parseStrictNumber(raw) {
+  if (typeof raw !== 'string' || !/^-?\d+(\.\d+)?$/.test(raw.trim())) return NaN;
+  return parseFloat(raw);
+}
+
 const env = {
   NODE_ENV: process.env.NODE_ENV || 'development',
   PORT: process.env.PORT || 3000,
@@ -34,12 +45,12 @@ const env = {
   // milestone futura poder ligar uma taxa não-zero sem reescrever o cálculo.
   // Não existe CASHOUT_MIN_AMOUNT: BR-2 não exige um piso além da checagem
   // de valor positivo já aplicada no serviço.
-  CASHOUT_FEE_PERCENT: parseFloat(process.env.CASHOUT_FEE_PERCENT || '0'),
+  CASHOUT_FEE_PERCENT: parseStrictNumber(process.env.CASHOUT_FEE_PERCENT || '0'),
 
   // Cancelamento de aposta (Fase 4). Taxa percentual retida sobre o restante
   // da stake ao cancelar — 5% por padrão (requisitos.txt fixa esse valor;
   // o env var só existe pra não hardcodar o número duas vezes no código).
-  CANCEL_FEE_PERCENT: parseFloat(process.env.CANCEL_FEE_PERCENT || '5'),
+  CANCEL_FEE_PERCENT: parseStrictNumber(process.env.CANCEL_FEE_PERCENT || '5'),
 
   // Logging
   LOG_LEVEL: process.env.LOG_LEVEL || 'info',

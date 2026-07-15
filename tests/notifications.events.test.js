@@ -66,7 +66,9 @@ describe('notificationService — catálogo de 7 eventos (NOTIF-01..05)', () => 
       userId: u1,
       marketId: 201,
       question: 'Vai chover amanhã?',
-      amount: 30,
+      grossAmount: 30,
+      netAmount: 28.5,
+      feeAmount: 1.5,
     });
     await wait();
 
@@ -75,6 +77,8 @@ describe('notificationService — catálogo de 7 eventos (NOTIF-01..05)', () => 
     expect(row.related_entity).toBe('wager');
     expect(row.related_id).toBe(102);
     expect(row.body).toContain('30.00');
+    expect(row.body).toContain('28.50');
+    expect(row.body).toContain('1.50');
     expect(row.body).toContain('Vai chover amanhã?');
   });
 

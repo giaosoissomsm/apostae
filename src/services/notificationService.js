@@ -53,7 +53,7 @@ function register() {
     await notify(evt.userId, {
       type: 'wager.cancelled',
       title: 'Aposta cancelada',
-      body: `Sua aposta de R$${evt.amount.toFixed(2)} em "${evt.question}" foi cancelada e o valor foi devolvido pra sua carteira.`,
+      body: `Sua aposta de R$${evt.grossAmount.toFixed(2)} em "${evt.question}" foi cancelada. R$${evt.netAmount.toFixed(2)} foi devolvido pra sua carteira (taxa de R$${evt.feeAmount.toFixed(2)}).`,
       relatedEntity: 'wager',
       relatedId: evt.wagerId,
     });

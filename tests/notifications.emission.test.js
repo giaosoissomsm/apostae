@@ -17,6 +17,8 @@ const { query } = require('../src/config/database');
 const domainEvents = require('../src/events/domainEvents');
 const wagerService = require('../src/services/wagerService');
 const marketService = require('../src/services/marketService');
+const env = require('../src/config/env');
+const money = require('../src/utils/money');
 
 describe('emissão de eventos de domínio a partir de wagerService/marketService (NOTIF-01..05)', () => {
   let adminId;
@@ -120,14 +122,19 @@ describe('emissão de eventos de domínio a partir de wagerService/marketService
     await wait();
     listener.stop();
 
-    expect(result).toEqual({ ok: true });
+    // 04-01 rewrote cancelWager to charge CANCEL_FEE_PERCENT (5% por padrão)
+    // e retornar { ok, refunded, fee } em vez de { ok } — ver 04-REVIEW.md WR-02.
+    const { fee, net } = money.applyFeePercent(20, env.CANCEL_FEE_PERCENT);
+    expect(result).toEqual({ ok: true, refunded: net, fee });
     expect(listener.captured).toHaveLength(1);
     expect(listener.captured[0].payload).toEqual({
       wagerId: wager.id,
       userId,
       marketId: market.id,
       question: market.question,
-      amount: 20,
+      grossAmount: 20,
+      netAmount: net,
+      feeAmount: fee,
     });
   });
 
