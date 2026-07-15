@@ -224,10 +224,12 @@ async function seedMarketOptions(marketId, options) {
     })
     .join(', ');
   const result = await query(
-    `INSERT INTO market_options (market_id, label, odds, sort_order)
-     VALUES ${placeholders}
-     RETURNING id, sort_order
-     ORDER BY sort_order;`,
+    `WITH ins AS (
+       INSERT INTO market_options (market_id, label, odds, sort_order)
+       VALUES ${placeholders}
+       RETURNING id, sort_order
+     )
+     SELECT id, sort_order FROM ins ORDER BY sort_order;`,
     values
   );
   return result.rows;
