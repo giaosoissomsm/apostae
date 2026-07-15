@@ -217,19 +217,54 @@ class MarketService {
     return closed;
   }
 
-  // Resolve um mercado com o resultado dado, pagando quem apostou certo. Idempotente: erro se já resolvido.
-  async resolveMarket(marketId, outcome) {
-    if (outcome !== 'yes' && outcome !== 'no') {
-      throw new ValidationError("O resultado precisa ser 'yes' ou 'no'.");
-    }
-
-    const { resolved, question, wagerOutcomes } = await transaction(async (client) => {
+  // Resolve um mercado com o resultado dado, pagando quem apostou certo.
+  // Idempotente: erro se já resolvido. Suporta os 3 tipos de mercado — o
+  // market_type só é conhecido depois de travar a linha do mercado (mesmo
+  // padrão adotado em placeWager, Plan 03-04: a validação que depende do
+  // tipo é adiada pra dentro da transação, nunca decidida antes do lock).
+  // binary: outcome ('yes'/'no') grava markets.outcome via marketRepository.resolve
+  // (método intocado). over_under/multiple_choice: winningOptionId precisa
+  // pertencer a ESTE mercado — validado via marketOptionRepository.findByIdForMarket
+  // (MARKET-06, mesmo chokepoint IDOR-safe usado em placeWager) ANTES de
+  // qualquer pagamento, e grava markets.winning_option_id via
+  // marketRepository.resolveWithOption.
+  //
+  // ISTO É O ÚNICO PONTO DE GENERALIZAÇÃO DO LOOP DE PAGAMENTO (RESEARCH.md
+  // Pattern 2 / Pitfall 2, 02-REVIEW.md CR-01/02/03): a condição isWinner é a
+  // única linha alterada dentro do loop — remainingFraction/money.multiply/
+  // wallet/audit permanecem caractere-por-caractere idênticos ao código
+  // binary original, tanto no ramo de vitória quanto no de derrota.
+  async resolveMarket(marketId, outcome, winningOptionId) {
+    const { resolved, question, wagerOutcomes, winnerLabel } = await transaction(async (client) => {
       const marketResult = await client.query('SELECT * FROM markets WHERE id = $1 FOR UPDATE;', [marketId]);
       const market = marketResult.rows[0];
       if (!market) throw new NotFoundError('Mercado não encontrado.');
       if (market.status === 'resolved') throw new ConflictError('Esse mercado já foi resolvido.');
 
-      const resolvedMarket = await marketRepository.resolve(marketId, outcome, client);
+      let resolvedMarket;
+      let winningOptionIdNum = null;
+      let optionLabel = null;
+
+      if (market.market_type === 'binary') {
+        if (outcome !== 'yes' && outcome !== 'no') {
+          throw new ValidationError("O resultado precisa ser 'yes' ou 'no'.");
+        }
+        // Caminho binary — método intocado desde antes do Phase 3.
+        resolvedMarket = await marketRepository.resolve(marketId, outcome, client);
+      } else {
+        winningOptionIdNum = Number(winningOptionId);
+        if (!Number.isFinite(winningOptionIdNum)) {
+          throw new ValidationError('winning_option_id inválido.');
+        }
+        // IDOR guard (MARKET-06/T-03-18): id sempre pareado com market_id na
+        // mesma query travada — uma opção de outro mercado nunca chega perto
+        // de virar o vencedor nem de disparar um pagamento.
+        const option = await marketOptionRepository.findByIdForMarket(winningOptionIdNum, market.id, client);
+        if (!option) throw new ValidationError('Opção vencedora inválida para esse mercado.');
+        optionLabel = option.label;
+        resolvedMarket = await marketRepository.resolveWithOption(marketId, winningOptionIdNum, client);
+      }
+
       const pendingWagers = await wagerRepository.findPendingByMarket(marketId, client);
 
       // Coleta os resultados por aposta aqui dentro (dados já lidos na
@@ -237,7 +272,11 @@ class MarketService {
       const outcomes = [];
 
       for (const wager of pendingWagers) {
-        if (wager.choice === outcome) {
+        const isWinner = market.market_type === 'binary'
+          ? wager.choice === outcome
+          : wager.option_id === winningOptionIdNum;
+
+        if (isWinner) {
           await wagerRepository.updateStatus(wager.id, 'won', client);
 
           // Paga apenas a fração restante (pós-cashout) da aposta, nunca o
@@ -277,14 +316,21 @@ class MarketService {
         }
       }
 
-      logger.info(`Mercado #${marketId} resolvido como "${outcome}" (${pendingWagers.length} apostas processadas)`);
-      return { resolved: resolvedMarket, question: market.question, wagerOutcomes: outcomes };
+      const resolvedLabel = market.market_type === 'binary' ? outcome : optionLabel;
+      logger.info(`Mercado #${marketId} resolvido como "${resolvedLabel}" (${pendingWagers.length} apostas processadas)`);
+      return { resolved: resolvedMarket, question: market.question, wagerOutcomes: outcomes, winnerLabel: optionLabel };
     });
 
     // Emitido só depois do commit (D-01): um rollback nunca deve deixar um
-    // evento "fantasma" sem linha correspondente no banco.
+    // evento "fantasma" sem linha correspondente no banco. Pra tipos novos,
+    // o outcome emitido é o LABEL da opção vencedora (já resolvido dentro da
+    // transação via o lookup IDOR-safe acima), nunca o option_id bruto — a
+    // notificação interpola evt.outcome diretamente no texto pro usuário
+    // (Pitfall 5). binary continua emitindo o mesmo valor bruto 'yes'/'no'
+    // de sempre, sem alteração.
+    const eventOutcome = winnerLabel != null ? winnerLabel : outcome;
     const recipients = [...new Set(wagerOutcomes.map((w) => w.userId))];
-    domainEvents.emit('market.resolved', { marketId, question, outcome, recipients });
+    domainEvents.emit('market.resolved', { marketId, question, outcome: eventOutcome, recipients });
 
     for (const w of wagerOutcomes) {
       if (w.won) {
