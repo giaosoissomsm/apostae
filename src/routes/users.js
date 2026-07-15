@@ -50,6 +50,11 @@ router.put('/:id/status', requireAuth, requireAdmin, usersController.setUserStat
 router.put('/:id/role', requireAuth, requireAdmin, usersController.setUserRole);
 
 /**
+ * Admin: Ajustar saldo (créditos)
+ */
+router.post('/:id/balance', requireAuth, requireAdmin, usersController.adjustUserBalance);
+
+/**
  * Admin: Deletar usuário
  */
 router.delete('/:id', requireAuth, requireAdmin, usersController.deleteUser);
