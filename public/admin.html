@@ -10,7 +10,7 @@
 </head>
 <body>
   <div class="topbar">
-    <div class="brand">ZOEIRA<span class="dot">.</span>MARKET</div>
+    <div class="brand">APOSTAE<span class="dot">.</span>ADMIN</div>
     <nav>
       <a href="/index.html">Ver mercados</a>
       <a href="/profile.html">Perfil</a>
@@ -38,13 +38,51 @@
           <label>Descrição (opcional)</label>
           <input id="mDescription" placeholder="Regras, prazo pra resolver, etc." />
         </div>
-        <div class="field">
-          <label>Odd Sim</label>
-          <input id="mOddsYes" type="number" step="0.01" min="1.01" value="2.00" required />
+        <div class="field" style="grid-column: 1 / -1;">
+          <label>Tipo de mercado</label>
+          <select id="mMarketType">
+            <option value="binary" selected>Binário (Sim/Não)</option>
+            <option value="over_under">Over/Under (limite numérico)</option>
+            <option value="multiple_choice">Múltipla escolha</option>
+          </select>
         </div>
-        <div class="field">
-          <label>Odd Não</label>
-          <input id="mOddsNo" type="number" step="0.01" min="1.01" value="1.80" required />
+
+        <div id="fieldsetBinary" class="market-type-fieldset" style="display: contents;">
+          <div class="field">
+            <label>Odd Sim</label>
+            <input id="mOddsYes" type="number" step="0.01" min="1.01" value="2.00" required />
+          </div>
+          <div class="field">
+            <label>Odd Não</label>
+            <input id="mOddsNo" type="number" step="0.01" min="1.01" value="1.80" required />
+          </div>
+        </div>
+
+        <div id="fieldsetOverUnder" class="market-type-fieldset" style="display: none;">
+          <div class="field">
+            <label>Limite (ex: 2.5)</label>
+            <input id="mThreshold" type="number" step="0.5" min="0.5" />
+          </div>
+          <div class="field">
+            <label>Odd Over</label>
+            <input id="mOddsOver" type="number" step="0.01" min="1.01" />
+          </div>
+          <div class="field">
+            <label>Odd Under</label>
+            <input id="mOddsUnder" type="number" step="0.01" min="1.01" />
+          </div>
+          <div class="field" style="grid-column: 1 / -1;">
+            <p style="color: var(--text-muted); font-size: 13px; margin: 0;">Dica: use .5 (ex: 2.5) pra evitar empate exato.</p>
+          </div>
+        </div>
+
+        <div id="fieldsetMultipleChoice" class="market-type-fieldset" style="display: none;">
+          <div class="field" style="grid-column: 1 / -1;">
+            <label>Opções</label>
+            <div id="optionsList" class="options-list"></div>
+            <button type="button" id="addOptionBtn" class="btn-ghost" style="margin-top:8px;">+ Adicionar opção</button>
+            <p style="color: var(--text-muted); font-size: 13px; margin: 8px 0 0;">Mínimo 2, máximo 20 opções.</p>
+          </div>
         </div>
 
         <div style="grid-column: 1 / -1; border-top: 1px dashed var(--line); margin: 6px 0 4px; padding-top: 14px;">
@@ -78,12 +116,14 @@
 
     <div class="panel">
       <h2>Mercados</h2>
-      <table>
-        <thead>
-          <tr><th>Pergunta</th><th>Odds</th><th>Status</th><th>Agenda</th><th>Resultado</th><th>Ações</th></tr>
-        </thead>
-        <tbody id="marketsBody"></tbody>
-      </table>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Pergunta</th><th>Tipo</th><th>Odds</th><th>Status</th><th>Agenda</th><th>Resultado</th><th>Ações</th></tr>
+          </thead>
+          <tbody id="marketsBody"></tbody>
+        </table>
+      </div>
     </div>
 
     <div class="panel">
@@ -101,10 +141,12 @@
 
     <div class="panel">
       <h2>Usuários</h2>
-      <table>
-        <thead><tr><th>Usuário</th><th>Email</th><th>Tipo</th><th>Status</th><th>Ações</th></tr></thead>
-        <tbody id="usersBody"></tbody>
-      </table>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Usuário</th><th>Email</th><th>Tipo</th><th>Status</th><th>Ações</th></tr></thead>
+          <tbody id="usersBody"></tbody>
+        </table>
+      </div>
     </div>
   </main>
 

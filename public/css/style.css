@@ -67,7 +67,7 @@ button, input, select, textarea { font-family: inherit; }
 }
 .brand .dot { color: var(--sim); }
 
-.topbar nav { display: flex; align-items: center; gap: 18px; }
+.topbar nav { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
 .topbar nav a {
   text-decoration: none;
   color: var(--text-muted);
@@ -345,7 +345,9 @@ main {
   margin: 0 0 16px;
 }
 
+.table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.table-wrap table { min-width: 520px; }
 th, td { text-align: left; padding: 10px 8px; border-bottom: 1px solid var(--line); }
 th { color: var(--text-muted); font-weight: 500; text-transform: uppercase; font-size: 11px; letter-spacing: .05em; }
 td.mono { font-family: var(--font-mono); }
@@ -399,4 +401,56 @@ td.mono { font-family: var(--font-mono); }
 
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; transition: none !important; }
+}
+
+@media (max-width: 640px) {
+  main { padding: 20px 16px 64px; }
+  .topbar { padding: 14px 16px; }
+  .markets-grid { grid-template-columns: 1fr; }
+  .page-head h1 { font-size: 24px; }
+  .panel { padding: 16px; }
+}
+
+/* ---------- Phase 3: generalized market types (additive only, MARKET-03 hard rule) ---------- */
+.options-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.option-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.option-row .option-label,
+.option-row .option-odds {
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 7px 9px;
+  color: var(--text);
+  font-size: 13px;
+}
+.option-row .option-label { flex: 2; }
+.option-row .option-odds { flex: 1; }
+
+.option-row .remove-option {
+  color: var(--nao);
+  border-color: var(--nao-dim);
+  flex: 0 0 auto;
+}
+
+.odd-btn.option .value { color: var(--text); }
+
+.odds-row.multi { flex-wrap: wrap; }
+.odds-row.multi .odd-btn.option { flex: 1 1 120px; min-width: 120px; }
+
+.resolve-select {
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 7px 9px;
+  color: var(--text);
+  font-size: 13px;
 }
