@@ -76,9 +76,11 @@ class AuthService {
       userId: user.id,
       username: user.username,
       roleId: user.role_id,
+      createdAt: Date.now(),
     };
 
-    // Armazena sessão no Redis (30 min)
+    // Armazena sessão no Redis (renovada a cada request por inatividade;
+    // createdAt fixa o teto absoluto verificado em requireAuth)
     await redis.setex(
       `session:${sessionId}`,
       env.SESSION_TIMEOUT / 1000,

@@ -1,5 +1,10 @@
-const { Pool } = require('pg');
+const { Pool, types } = require('pg');
 const env = require('./env');
+
+// node-postgres devolve colunas NUMERIC como string por padrão (evita perda de
+// precisão em linguagens sem decimal nativo). O frontend trata odds/valores
+// como number direto (.toFixed()), então convertemos aqui pra todo o app.
+types.setTypeParser(types.builtins.NUMERIC, (val) => (val === null ? null : parseFloat(val)));
 
 const pool = new Pool({
   host: env.DB_HOST,

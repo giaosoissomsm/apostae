@@ -1,6 +1,7 @@
 const { query } = require('../config/database');
 const redis = require('../config/redis');
 const userRepository = require('../repositories/userRepository');
+const wagerRepository = require('../repositories/wagerRepository');
 const { NotFoundError, ValidationError, ConflictError } = require('../utils/errors');
 const logger = require('../utils/logger');
 
@@ -40,7 +41,18 @@ class UserService {
 
     // Remove dados sensíveis
     delete user.password_hash;
+
+    const walletResult = await query('SELECT balance FROM wallets WHERE user_id = $1;', [userId]);
+    user.credits = walletResult.rows[0] ? Number(walletResult.rows[0].balance) : 0;
+
     return user;
+  }
+
+  /**
+   * Lista as apostas do próprio usuário
+   */
+  async getMyWagers(userId) {
+    return wagerRepository.findByUserId(userId);
   }
 
   /**

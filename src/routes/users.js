@@ -10,6 +10,11 @@ const router = express.Router();
 router.get('/me', requireAuth, usersController.getMe);
 
 /**
+ * Apostas do usuário atual
+ */
+router.get('/me/wagers', requireAuth, usersController.getMyWagers);
+
+/**
  * Admin: Listar todos os usuários
  */
 router.get('/', requireAuth, requireAdmin, usersController.listUsers);

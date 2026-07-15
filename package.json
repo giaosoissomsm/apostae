@@ -1,6 +1,6 @@
 {
   "name": "apostae",
-  "version": "4.0.0",
+  "version": "5.0.0",
   "description": "ApostaE - Plataforma de apostas com odds | Production-Ready",
   "main": "server.js",
   "type": "commonjs",

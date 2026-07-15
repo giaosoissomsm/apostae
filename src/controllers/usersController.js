@@ -70,6 +70,14 @@ const getMe = catchAsync(async (req, res) => {
 });
 
 /**
+ * GET /api/users/me/wagers - Apostas do usuário atual
+ */
+const getMyWagers = catchAsync(async (req, res) => {
+  const wagers = await userService.getMyWagers(req.user.id);
+  res.json(wagers);
+});
+
+/**
  * GET /api/users/:id - Dados de um usuário específico
  */
 const getUser = catchAsync(async (req, res) => {
@@ -165,6 +173,7 @@ module.exports = {
   listUsers,
   createUser,
   getMe,
+  getMyWagers,
   getUser,
   searchUsers,
   setUserStatus,

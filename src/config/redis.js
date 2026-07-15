@@ -79,19 +79,19 @@ async function delPattern(pattern) {
 }
 
 /**
- * Incrementa valor (para rate limiting)
- */
-async function incr(key) {
-  await connect();
-  return await client.incr(key);
-}
-
-/**
  * Expira chave após segundos
  */
 async function expire(key, seconds) {
   await connect();
   await client.expire(key, seconds);
+}
+
+/**
+ * Retorna TTL restante da chave em segundos (-2 se não existe, -1 se sem TTL)
+ */
+async function ttl(key) {
+  await connect();
+  return client.ttl(key);
 }
 
 /**
@@ -109,7 +109,7 @@ module.exports = {
   get,
   del,
   delPattern,
-  incr,
   expire,
+  ttl,
   flushAll,
 };
