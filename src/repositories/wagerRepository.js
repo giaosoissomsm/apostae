@@ -1,20 +1,26 @@
 const { query } = require('../config/database');
 
 const SELECT_WITH_MARKET = `
-  SELECT w.id, w.user_id, w.market_id, w.choice, w.amount, w.odds_at_time, w.potential_payout,
+  SELECT w.id, w.user_id, w.market_id, w.choice, w.option_id, w.amount, w.odds_at_time, w.potential_payout,
          w.status, w.created_at, w.resolved_at,
-         m.question, m.status AS market_status, m.outcome AS market_outcome
+         m.question, m.status AS market_status, m.outcome AS market_outcome, m.market_type,
+         mo.label AS option_label
   FROM wagers w
   JOIN markets m ON m.id = w.market_id
+  LEFT JOIN market_options mo ON mo.id = w.option_id
 `;
 
 class WagerRepository {
-  async create({ userId, marketId, choice, amount, oddsAtTime, potentialPayout }, client) {
+  // optionId é opcional (default null). Quando presente (mercados
+  // over_under/multiple_choice), choice é gravado como null — a checagem
+  // XOR de banco (migração 005) é o backstop contra os dois setados/nulos
+  // ao mesmo tempo. Quando ausente, o INSERT binário se comporta como antes.
+  async create({ userId, marketId, choice, optionId = null, amount, oddsAtTime, potentialPayout }, client) {
     const result = await client.query(
-      `INSERT INTO wagers (user_id, market_id, choice, amount, odds_at_time, potential_payout, status)
-       VALUES ($1, $2, $3, $4, $5, $6, 'pending')
+      `INSERT INTO wagers (user_id, market_id, choice, option_id, amount, odds_at_time, potential_payout, status)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, 'pending')
        RETURNING *;`,
-      [userId, marketId, choice, amount, oddsAtTime, potentialPayout]
+      [userId, marketId, optionId ? null : choice, optionId, amount, oddsAtTime, potentialPayout]
     );
     return result.rows[0];
   }
