@@ -135,11 +135,11 @@ Decimal phases appear between their surrounding integers in numeric order.
   4. Cancellation is blocked once the market is closed, the wager is resolved, or a cashout has already occurred on that wager — enforced transactionally (row lock + re-validation) so it cannot race a concurrent cashout or market resolution, verified by a concurrency test (CANCEL-06, CANCEL-07)
   5. The new logic replaces `cancelWager` in place — same route/method, no versioned endpoint or feature flag (CANCEL-08)
 
-**Plans**: 3 plans
+**Plans**: 1/3 plans executed
 
 **Wave 1**
 
-- [ ] 04-01-PLAN.md — Core rewrite: cancelWager (lock order fix, IDOR 404, cashout hard-block, 5% fee) + CANCEL_FEE_PERCENT config + regression-test update
+- [x] 04-01-PLAN.md — Core rewrite: cancelWager (lock order fix, IDOR 404, cashout hard-block, 5% fee) + CANCEL_FEE_PERCENT config + regression-test update
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -156,5 +156,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 | 1. Notifications Infrastructure | 4/4 | Complete   | 2026-07-14 |
 | 2. Partial Cashout | 7/7 | Complete   | 2026-07-14 |
 | 3. New Market Types | 6/7 | In Progress|  |
-| 4. Bet Cancellation v2 | 0/3 | Not started | - |
+| 4. Bet Cancellation v2 | 1/3 | In Progress|  |
 </content>

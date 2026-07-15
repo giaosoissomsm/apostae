@@ -46,14 +46,14 @@ Requirements for this milestone. Each maps to a roadmap phase. Build order: NOTI
 
 ### Bet Cancellation v2 (CANCEL)
 
-- [ ] **CANCEL-01**: User can cancel a wager when the market permits cancellation
-- [ ] **CANCEL-02**: Cancelling automatically charges a 5% fee on the wagered amount and refunds 95% to the user's wallet
-- [ ] **CANCEL-03**: Fee is computed off the wager's *remaining* stake (post any prior partial cashout), not its original amount
-- [ ] **CANCEL-04**: Cancellation produces a wallet transaction record and an audit log entry
-- [ ] **CANCEL-05**: Cancelling sets the wager's status to "Cancelada"
-- [ ] **CANCEL-06**: Cancellation is blocked once the market is closed, the wager is resolved, or a cashout has already occurred on that wager
-- [ ] **CANCEL-07**: The blocking checks in CANCEL-06 are enforced transactionally (row lock + re-validation) so a cancellation cannot race a concurrent cashout or market resolution on the same wager
-- [ ] **CANCEL-08**: Cancellation replaces the existing `cancelWager` logic in place (same route/method, no versioned endpoint or feature flag — codebase is pre-production)
+- [x] **CANCEL-01**: User can cancel a wager when the market permits cancellation
+- [x] **CANCEL-02**: Cancelling automatically charges a 5% fee on the wagered amount and refunds 95% to the user's wallet
+- [x] **CANCEL-03**: Fee is computed off the wager's *remaining* stake (post any prior partial cashout), not its original amount
+- [x] **CANCEL-04**: Cancellation produces a wallet transaction record and an audit log entry
+- [x] **CANCEL-05**: Cancelling sets the wager's status to "Cancelada"
+- [x] **CANCEL-06**: Cancellation is blocked once the market is closed, the wager is resolved, or a cashout has already occurred on that wager
+- [x] **CANCEL-07**: The blocking checks in CANCEL-06 are enforced transactionally (row lock + re-validation) so a cancellation cannot race a concurrent cashout or market resolution on the same wager
+- [x] **CANCEL-08**: Cancellation replaces the existing `cancelWager` logic in place (same route/method, no versioned endpoint or feature flag — codebase is pre-production)
 
 ## v2 Requirements
 
@@ -113,14 +113,14 @@ Deferred to future release. Tracked but not in current roadmap.
 | MARKET-06 | Phase 3 | Complete |
 | MARKET-07 | Phase 3 | Complete |
 | MARKET-08 | Phase 3 | Complete |
-| CANCEL-01 | Phase 4 | Pending |
-| CANCEL-02 | Phase 4 | Pending |
-| CANCEL-03 | Phase 4 | Pending |
-| CANCEL-04 | Phase 4 | Pending |
-| CANCEL-05 | Phase 4 | Pending |
-| CANCEL-06 | Phase 4 | Pending |
-| CANCEL-07 | Phase 4 | Pending |
-| CANCEL-08 | Phase 4 | Pending |
+| CANCEL-01 | Phase 4 | Complete |
+| CANCEL-02 | Phase 4 | Complete |
+| CANCEL-03 | Phase 4 | Complete |
+| CANCEL-04 | Phase 4 | Complete |
+| CANCEL-05 | Phase 4 | Complete |
+| CANCEL-06 | Phase 4 | Complete |
+| CANCEL-07 | Phase 4 | Complete |
+| CANCEL-08 | Phase 4 | Complete |
 
 **Coverage:**
 

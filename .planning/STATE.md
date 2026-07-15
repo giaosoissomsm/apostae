@@ -2,19 +2,19 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-current_phase: 03
-current_phase_name: new-market-types
+current_phase: 04
+current_phase_name: bet-cancellation-v2
 status: executing
-stopped_at: Completed 03-02-PLAN.md
-last_updated: "2026-07-15T03:51:15.640Z"
+stopped_at: Completed 04-01-PLAN.md
+last_updated: "2026-07-15T04:55:46.977Z"
 last_activity: 2026-07-15
-last_activity_desc: Phase 03 execution started
+last_activity_desc: Phase 04 execution started
 progress:
   total_phases: 4
-  completed_phases: 2
-  total_plans: 18
-  completed_plans: 17
-  percent: 50
+  completed_phases: 3
+  total_plans: 21
+  completed_plans: 19
+  percent: 75
 ---
 
 # Project State
@@ -27,14 +27,14 @@ See: .planning/PROJECT.md (updated 2026-07-13)
 correct and auditable — a user's balance must never diverge from the sum of their recorded
 transactions, even under concurrent access.
 
-**Current focus:** Phase 03 — new-market-types
+**Current focus:** Phase 04 — bet-cancellation-v2
 
 ## Current Position
 
-Phase: 03 (new-market-types) — EXECUTING
-Plan: 7 of 7
+Phase: 04 (bet-cancellation-v2) — EXECUTING
+Plan: 2 of 3
 Status: Ready to execute
-Last activity: 2026-07-15 — Phase 03 execution started
+Last activity: 2026-07-15 — Phase 04 execution started
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -75,6 +75,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 03 P04 | 15min | 2 tasks | 2 files |
 | Phase 03 P05 | 20min | 3 tasks | 3 files |
 | Phase 03 P06 | 12min | 2 tasks | 3 files |
+| Phase 04 P01 | 20min | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -103,6 +104,19 @@ Recent decisions affecting current work:
   judgment call, not a business rule — requisitos.txt only says "don't limit to 3" and "must be
   dynamic," no explicit ceiling). 20 comfortably covers realistic use cases (e.g. "who scores
   first" with a full roster) while bounding payload size/DoS risk.
+
+- Phase 4: Cancellation is blocked ENTIRELY once any cashout has occurred on a wager
+  (cashed_out_amount > 0), even a partial one — confirmed by project owner, resolving a genuine
+  tension between CANCEL-03's "remaining stake" formula wording and CANCEL-06/requisitos.txt's
+  "existir cashout realizado" blocking language. CANCEL-03's remaining-stake formula is computed
+  as a defensive no-op / documentation of intent, but the actual code path is unreachable once the
+  cashed-out block fires first — matches the literal spec wording, simpler and safer for a first
+  cancellation-v2 release.
+
+- Phase 4: Cancellation fee is a `CANCEL_FEE_PERCENT` env var, default 5 (matches
+  `CASHOUT_FEE_PERCENT`'s pattern from Phase 2 for consistency) — engineering judgment call, not
+  re-confirmed with the user since requisitos.txt already pins the value at exactly 5%; the env
+  var only exists so the number isn't hardcoded twice across the codebase.
 
 - Phase 3: Over/Under gets a dedicated admin form (threshold + Odds Over + Odds Under: 3 fields,
   corrected from an earlier "2-field" shorthand — labels ("Over X"/"Under X") auto-generate from
@@ -145,6 +159,9 @@ Recent decisions affecting current work:
 - [Phase ?]: Phase 3 P05: mandatory completeness audit (grep .choice / odds_yes|odds_no / cashed_out_amount across src/) confirmed no unbranched binary assumption remains in any money/resolution/refund path -- cancelWager and deleteMarket's Phase 2 CR-02/CR-03 fixes remain correct as-is (never referenced wager.choice), no additional fix required beyond resolveMarket's own generalization.
 - [Phase ?]: Phase 3 P06: Fieldset visibility toggled via inline style.display ('contents' for the visible one, 'none' for the other two) rather than a CSS class -- preserves the binary fieldset's pixel-identical layout inside the shared .grid-2 grid while allowing exactly one fieldset to be shown/hidden as a unit.
 - [Phase ?]: Phase 3 P06: oddsCell()/resultLabel()/actionsCell() binary branches use the exact original expressions rather than a shared/generalized code path, per UI-SPEC's explicit regression-guard instruction against one shared template changing binary's markup as a side effect of generalizing Over/Under and multiple-choice.
+- [Phase ?]: Phase 4 P01: CANCEL_FEE_PERCENT added as an env var (default 5, [0,100]-bounded), mirroring CASHOUT_FEE_PERCENT, rather than hardcoding 0.05/0.95 inline -- consistency and testability with the existing fee-config pattern.
+- [Phase ?]: Phase 4 P01: cancelWager's AuthorizationError import removed -- ownership is now enforced entirely by wagerRepository.findByIdForUpdate's WHERE clause returning null (404 NotFoundError), never a 403, closing the previously-documented weaker IDOR pattern.
+- [Phase ?]: Phase 4 P01: .env.example edit skipped -- file is blocked by this sandbox's own permission settings (.env* deny pattern), so its CASHOUT_FEE_PERCENT documentation could not be verified; CANCEL_FEE_PERCENT is fully functional via its code default (5) regardless.
 
 ### Pending Todos
 
@@ -178,7 +195,7 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-07-15T03:50:23.102Z
-Stopped at: Completed 03-02-PLAN.md
+Last session: 2026-07-15T04:55:46.964Z
+Stopped at: Completed 04-01-PLAN.md
 Resume file: 
 None
