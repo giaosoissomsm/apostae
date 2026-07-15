@@ -38,8 +38,8 @@ Requirements for this milestone. Each maps to a roadmap phase. Build order: NOTI
 - [x] **MARKET-01**: Admin can create an Over/Under market with a freely configurable numeric threshold (e.g. 2.5, 3.5)
 - [x] **MARKET-02**: Admin can create a multiple-choice market with a dynamic number of options (not capped at 3)
 - [x] **MARKET-03**: Existing binary Sim/Não markets continue to work unchanged (additive migration, no regression)
-- [ ] **MARKET-04**: All market-type and option validation happens server-side (option count, threshold format, duplicate options, etc.)
-- [ ] **MARKET-05**: Option/outcome count is bounded server-side to prevent unbounded-list DoS; UI limits alone are not sufficient
+- [x] **MARKET-04**: All market-type and option validation happens server-side (option count, threshold format, duplicate options, etc.)
+- [x] **MARKET-05**: Option/outcome count is bounded server-side to prevent unbounded-list DoS; UI limits alone are not sufficient
 - [x] **MARKET-06**: Option IDs are scoped to their parent market server-side (no IDOR — a wager can't reference an option belonging to a different market)
 - [x] **MARKET-07**: Payout/resolution logic is generalized to N outcomes (works for binary, Over/Under, and multiple-choice through the same resolution path where practical)
 - [ ] **MARKET-08**: Admin panel UI supports creating both new market types (per requisitos.txt's explicit requirement), not API-only
@@ -108,8 +108,8 @@ Deferred to future release. Tracked but not in current roadmap.
 | MARKET-01 | Phase 3 | Complete |
 | MARKET-02 | Phase 3 | Complete |
 | MARKET-03 | Phase 3 | Complete |
-| MARKET-04 | Phase 3 | Pending |
-| MARKET-05 | Phase 3 | Pending |
+| MARKET-04 | Phase 3 | Complete |
+| MARKET-05 | Phase 3 | Complete |
 | MARKET-06 | Phase 3 | Complete |
 | MARKET-07 | Phase 3 | Complete |
 | MARKET-08 | Phase 3 | Pending |
