@@ -109,13 +109,13 @@ Decimal phases appear between their surrounding integers in numeric order.
   4. All market-type and option input (option count, threshold format, duplicate options) is validated and bounded server-side, and an option ID can never be used to reference a different market's option (no IDOR) (MARKET-04, MARKET-05, MARKET-06)
   5. Wagers on any market type — binary, Over/Under, or multiple-choice — resolve and pay out correctly through a generalized N-outcome resolution path (MARKET-07)
 
-**Plans**: 4/7 plans executed
+**Plans**: 5/7 plans executed
 
 - [x] 03-01-PLAN.md — Additive schema migration 005 + test-DB seed helpers (Wave 1)
 - [x] 03-02-PLAN.md — Data layer: marketOptionRepository (IDOR-safe) + market/wager repo generalization (Wave 2)
 - [x] 03-03-PLAN.md — createMarket generalization (Over/Under + multiple-choice, 2–20 bound) + creation/validation tests (Wave 3)
 - [x] 03-04-PLAN.md — placeWager generalization + IDOR/attack-vector tests (Wave 3)
-- [ ] 03-05-PLAN.md — resolveMarket N-outcome generalization + binary-assumption completeness audit + resolution tests (Wave 4)
+- [x] 03-05-PLAN.md — resolveMarket N-outcome generalization + binary-assumption completeness audit + resolution tests (Wave 4)
 - [ ] 03-06-PLAN.md — Admin panel UI: type selector, Over/Under + dynamic option builder, resolve controls + additive CSS (Wave 5)
 - [ ] 03-07-PLAN.md — Dashboard N-option rendering + phase-gate human verify against real Postgres (Wave 6)
 
@@ -146,6 +146,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 |-------|----------------|--------|-----------|
 | 1. Notifications Infrastructure | 4/4 | Complete   | 2026-07-14 |
 | 2. Partial Cashout | 7/7 | Complete   | 2026-07-14 |
-| 3. New Market Types | 4/7 | In Progress|  |
+| 3. New Market Types | 5/7 | In Progress|  |
 | 4. Bet Cancellation v2 | 0/TBD | Not started | - |
 </content>

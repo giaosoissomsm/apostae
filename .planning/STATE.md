@@ -6,14 +6,14 @@ current_phase: 03
 current_phase_name: new-market-types
 status: executing
 stopped_at: Completed 03-02-PLAN.md
-last_updated: "2026-07-15T02:53:58.479Z"
+last_updated: "2026-07-15T03:42:02.069Z"
 last_activity: 2026-07-15
 last_activity_desc: Phase 03 execution started
 progress:
   total_phases: 4
   completed_phases: 2
   total_plans: 18
-  completed_plans: 15
+  completed_plans: 16
   percent: 50
 ---
 
@@ -32,7 +32,7 @@ transactions, even under concurrent access.
 ## Current Position
 
 Phase: 03 (new-market-types) — EXECUTING
-Plan: 5 of 7
+Plan: 6 of 7
 Status: Ready to execute
 Last activity: 2026-07-15 — Phase 03 execution started
 
@@ -73,6 +73,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 03 P02 | 15min | 3 tasks | 3 files |
 | Phase 03 P03 | 20min | 2 tasks | 5 files |
 | Phase 03 P04 | 15min | 2 tasks | 2 files |
+| Phase 03 P05 | 20min | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -137,6 +138,10 @@ Recent decisions affecting current work:
 - [Phase 03]: Phase 3 P03: marketRepository.create's oddsYes/oddsNo NULL path (over_under/multiple_choice) required a new migration 006 relaxing markets.odds_yes/odds_no NOT NULL -- migration 005 (03-01) left them NOT NULL, which would have blocked all non-binary market creation with a raw DB error instead of a clean ValidationError.
 - [Phase ?]: Phase 3 P04: wagerService.placeWager passes the raw destructured choice (not a locally-derived variable) to wagerRepository.create -- the repository's existing optionId-ternary already nulls choice out when optionId is set (03-02 decision), avoiding a duplicate XOR-decision point in the service layer.
 - [Phase ?]: Phase 3 P04: The non-admin market-creation attack vector is verified via Express router-stack introspection (requireAuth before requireAdmin before the controller, by reference equality) rather than a live HTTP request -- no supertest/Playwright/Cypress harness exists anywhere in this repo's test suite.
+- [Phase ?]: Phase 3 P05: resolveMarket's win-check generalized to a single isWinner branch (market_type === 'binary' ? wager.choice === outcome : wager.option_id === winningOptionId) inside the unchanged payout loop -- money.multiply/wallet/audit code stays byte-identical to pre-Phase-3, closing MARKET-07 without repeating the Phase 2 CR-01/02/03 'touched more of a financial function than necessary' failure mode.
+- [Phase ?]: Phase 3 P05: market_type-dependent resolveMarket validation (outcome vs winning_option_id) deferred inside the transaction after the market row is locked, mirroring the 03-04 placeWager precedent -- the type is only known after the FOR UPDATE lock, so validating before that point isn't meaningful.
+- [Phase ?]: Phase 3 P05: market.resolved event emits the winning option's label (not raw option_id) for over_under/multiple_choice, resolved via the same IDOR-safe findByIdForMarket lookup already performed for the payout branch -- binary keeps emitting the unchanged raw 'yes'/'no' value; notificationService.js needed no change.
+- [Phase ?]: Phase 3 P05: mandatory completeness audit (grep .choice / odds_yes|odds_no / cashed_out_amount across src/) confirmed no unbranched binary assumption remains in any money/resolution/refund path -- cancelWager and deleteMarket's Phase 2 CR-02/CR-03 fixes remain correct as-is (never referenced wager.choice), no additional fix required beyond resolveMarket's own generalization.
 
 ### Pending Todos
 
@@ -170,7 +175,7 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-07-15T02:52:22.501Z
+Last session: 2026-07-15T03:40:41.099Z
 Stopped at: Completed 03-02-PLAN.md
 Resume file: 
 None
