@@ -2,9 +2,9 @@
   const user = requireLogin();
   if (!user) return;
 
-  if (user.is_admin) document.getElementById('adminLink').style.display = '';
+  if (user.roleId === 2) document.getElementById('adminLink').style.display = '';
 
-  const selections = {}; // marketId -> 'yes' | 'no'
+  const selections = {}; // marketId -> 'yes' | 'no' (binary) | option id number (over_under/multiple_choice)
   let marketFilter = 'open'; // aberto, fechado, resolvido
   let marketsCache = [];
 
@@ -54,11 +54,13 @@
   }
 
   // Calcula tempo restante até closes_at e formata como "3h 45m"
+  // Backend manda timestamps como ISO-8601 (Date -> JSON via Express).
   function timeUntilClose(closesAt) {
     if (!closesAt) return '∞';
-    const d = new Date(closesAt.replace(' ', 'T') + 'Z');
+    const d = new Date(closesAt);
     const now = new Date();
     const ms = d - now;
+    if (Number.isNaN(ms)) return '—';
     if (ms <= 0) return 'Expirado';
     const hours = Math.floor(ms / 3600000);
     const mins = Math.floor((ms % 3600000) / 60000);
@@ -66,19 +68,62 @@
     return `${mins}m`;
   }
 
+  // m.market_type ausente é tratado como binary (compat com mercados antigos) - MARKET-03.
+  function isBinaryMarket(market) {
+    return market.market_type === 'binary' || !market.market_type;
+  }
+
   function ticketTemplate(market) {
     const sel = selections[market.id];
     const isOpen = market.status === 'open';
+    const binary = isBinaryMarket(market);
 
     let resultHtml = '';
     if (market.status === 'resolved') {
-      const label = market.outcome === 'yes' ? 'SIM' : 'NÃO';
+      let label;
+      if (binary) {
+        label = market.outcome === 'yes' ? 'SIM' : 'NÃO';
+      } else {
+        const opts = Array.isArray(market.options) ? market.options : [];
+        const winner = opts.find((o) => o.id === market.winning_option_id);
+        label = winner ? escapeHtml(winner.label) : '—';
+      }
       resultHtml = `<div class="ticket-result">Resultado final: <strong>${label}</strong></div>`;
     }
 
     let timerHtml = '';
     if (isOpen && market.closes_at) {
       timerHtml = `<div style="text-align:center; font-family:var(--font-mono); font-size:12px; color:var(--nao); margin-top:8px; padding-top:8px; border-top:1px solid var(--line);">⏱️ ${timeUntilClose(market.closes_at)}</div>`;
+    }
+
+    // Regra de regressão (MARKET-03): mercados binary renderizam os dois botões
+    // Sim/Não exatamente como antes, byte a byte. Mercados não-binários renderizam
+    // N botões a partir de market.options[] num branch irmão separado — nunca um
+    // template único condicional por atributo que possa alterar o markup binário.
+    let oddsButtonsHtml;
+    if (binary) {
+      oddsButtonsHtml = `
+          <div class="odds-row">
+            <button class="odd-btn sim ${sel === 'yes' ? 'selected' : ''}" data-choice="yes" ${!isOpen ? 'disabled' : ''}>
+              <span class="label">Sim</span>
+              <span class="value">${market.odds_yes.toFixed(2)}x</span>
+            </button>
+            <button class="odd-btn nao ${sel === 'no' ? 'selected' : ''}" data-choice="no" ${!isOpen ? 'disabled' : ''}>
+              <span class="label">Não</span>
+              <span class="value">${market.odds_no.toFixed(2)}x</span>
+            </button>
+          </div>`;
+    } else {
+      const opts = Array.isArray(market.options) ? market.options : [];
+      const rowClass = opts.length > 2 ? 'odds-row multi' : 'odds-row';
+      oddsButtonsHtml = `
+          <div class="${rowClass}">
+            ${opts.map((o) => `
+            <button class="odd-btn option ${sel === o.id ? 'selected' : ''}" data-option-id="${o.id}" ${!isOpen ? 'disabled' : ''}>
+              <span class="label">${escapeHtml(o.label)}</span>
+              <span class="value">${Number(o.odds).toFixed(2)}x</span>
+            </button>`).join('')}
+          </div>`;
     }
 
     return `
@@ -90,20 +135,11 @@
         </div>
         <div class="ticket-perforation"></div>
         <div class="ticket-bottom">
-          <div class="odds-row">
-            <button class="odd-btn sim ${sel === 'yes' ? 'selected' : ''}" data-choice="yes" ${!isOpen ? 'disabled' : ''}>
-              <span class="label">Sim</span>
-              <span class="value">${market.odds_yes.toFixed(2)}x</span>
-            </button>
-            <button class="odd-btn nao ${sel === 'no' ? 'selected' : ''}" data-choice="no" ${!isOpen ? 'disabled' : ''}>
-              <span class="label">Não</span>
-              <span class="value">${market.odds_no.toFixed(2)}x</span>
-            </button>
-          </div>
+          ${oddsButtonsHtml}
           ${isOpen ? `
           <div class="wager-form">
-            <input type="number" min="1" step="1" placeholder="Fichas" class="wager-amount" ${!sel ? 'disabled' : ''} />
-            <button class="btn-primary wager-submit" ${!sel ? 'disabled' : ''}>Apostar</button>
+            <input type="number" min="1" step="1" placeholder="Fichas" class="wager-amount" ${!sel && sel !== 0 ? 'disabled' : ''} />
+            <button class="btn-primary wager-submit" ${!sel && sel !== 0 ? 'disabled' : ''}>Apostar</button>
           </div>` : ''}
           ${timerHtml}
         </div>
@@ -137,7 +173,7 @@
         if (btn.disabled) return;
         const ticket = btn.closest('.ticket');
         const marketId = Number(ticket.dataset.id);
-        selections[marketId] = btn.dataset.choice;
+        selections[marketId] = btn.dataset.choice ?? Number(btn.dataset.optionId);
         renderMarkets();
       });
     });
@@ -148,14 +184,19 @@
         const marketId = Number(ticket.dataset.id);
         const amountInput = ticket.querySelector('.wager-amount');
         const amount = Number(amountInput.value);
-        const choice = selections[marketId];
+        const sel = selections[marketId];
+        const market = marketsCache.find((m) => m.id === marketId);
+        const binary = !market || isBinaryMarket(market);
 
-        if (!choice) return showToast('Escolhe Sim ou Não primeiro.', 'error');
+        if (sel === undefined) return showToast(binary ? 'Escolhe Sim ou Não primeiro.' : 'Escolhe uma opção primeiro.', 'error');
         if (!amount || amount <= 0) return showToast('Coloca um valor válido.', 'error');
 
         btn.disabled = true;
         try {
-          await Api.post('/wagers', { market_id: marketId, choice, amount });
+          const payload = binary
+            ? { market_id: marketId, choice: sel, amount }
+            : { market_id: marketId, option_id: sel, amount };
+          await Api.post('/wagers', payload);
           showToast('Aposta registrada!', 'success');
           delete selections[marketId];
           await refreshCredits();
@@ -178,7 +219,7 @@
     body.innerHTML = wagers.map((w) => `
       <tr>
         <td>${escapeHtml(w.question)}</td>
-        <td>${w.choice === 'yes' ? 'Sim' : 'Não'}</td>
+        <td>${w.option_id != null ? escapeHtml(w.option_label) : (w.choice === 'yes' ? 'Sim' : 'Não')}</td>
         <td class="mono">${fmtCredits(w.amount)}</td>
         <td class="mono">${w.odds_at_time.toFixed(2)}x</td>
         <td class="mono">${fmtCredits(w.potential_payout)}</td>
@@ -281,7 +322,7 @@
               <div style="padding:10px; margin-bottom:8px; background:var(--surface-2); border-radius:8px; border-left:3px solid ${w.status === 'won' ? 'var(--sim)' : w.status === 'lost' ? 'var(--nao)' : 'var(--text-muted)'};">
                 <div style="font-weight:500; margin-bottom:4px;">${escapeHtml(w.question)}</div>
                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; font-size:12px; color:var(--text-muted);">
-                  <div>Apostou: <span style="color:var(--text);">${w.choice === 'yes' ? 'Sim' : 'Não'} (${fmtCredits(w.amount)})</span></div>
+                  <div>Apostou: <span style="color:var(--text);">${w.option_id != null ? escapeHtml(w.option_label) : (w.choice === 'yes' ? 'Sim' : 'Não')} (${fmtCredits(w.amount)})</span></div>
                   <div>Odd: <span style="color:var(--text);">${w.odds_at_time.toFixed(2)}x</span></div>
                   <div>Retorno: <span style="color:var(--sim);">${fmtCredits(w.potential_payout)}</span></div>
                   <div style="text-align:right; ${w.status === 'won' ? 'color:var(--sim);' : w.status === 'lost' ? 'color:var(--nao);' : ''}">${resultLabel}</div>
