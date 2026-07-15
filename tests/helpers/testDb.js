@@ -132,16 +132,26 @@ async function applyCashoutMigration() {
 
 /**
  * Aplica a migration 005 (market_type/threshold/market_options/winning_option_id
- * + wagers.option_id/XOR CHECK) no banco de teste. Mesmo formato de
- * applyCashoutMigration/applyNotificationsMigration: carregada sob demanda
- * (não no topo do arquivo, pra este helper parsear mesmo antes da migration
- * 005 existir), roda cada string SQL do array `up` sequencialmente,
- * idempotente (ADD COLUMN IF NOT EXISTS / CREATE TABLE IF NOT EXISTS).
+ * + wagers.option_id/XOR CHECK) e a migration 006 (odds_yes/odds_no
+ * passam a ser nullable — over_under/multiple_choice não usam essas
+ * colunas, só market_options.odds por linha) no banco de teste. As duas
+ * migrations são tratadas como uma unidade aqui porque nenhuma
+ * over_under/multiple_choice consegue ser criada sem as duas aplicadas
+ * juntas (a 006 corrige uma lacuna que a 005 deixou). Mesmo formato de
+ * applyCashoutMigration/applyNotificationsMigration: carregadas sob demanda
+ * (não no topo do arquivo, pra este helper parsear mesmo antes das
+ * migrations existirem), roda cada string SQL do array `up` sequencialmente,
+ * idempotente (ADD COLUMN IF NOT EXISTS / CREATE TABLE IF NOT EXISTS / DROP
+ * NOT NULL é idempotente por natureza).
  */
 async function applyMarketTypesMigration() {
   assertTestDatabase();
   const marketTypesMigration = require('../../src/migrations/005_market_types');
   for (const sql of marketTypesMigration.up) {
+    await query(sql);
+  }
+  const oddsNullableMigration = require('../../src/migrations/006_market_odds_nullable');
+  for (const sql of oddsNullableMigration.up) {
     await query(sql);
   }
 }

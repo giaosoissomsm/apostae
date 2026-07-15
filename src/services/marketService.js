@@ -1,5 +1,6 @@
 const { transaction, query } = require('../config/database');
 const marketRepository = require('../repositories/marketRepository');
+const marketOptionRepository = require('../repositories/marketOptionRepository');
 const wagerRepository = require('../repositories/wagerRepository');
 const walletRepository = require('../repositories/walletRepository');
 const domainEvents = require('../events/domainEvents');
@@ -9,6 +10,41 @@ const money = require('../utils/money');
 
 function isValidOdds(n) {
   return Number.isFinite(n) && n >= 1.01 && n <= 1000;
+}
+
+const MARKET_TYPES = ['binary', 'over_under', 'multiple_choice'];
+const MIN_OPTIONS = 2;
+const MAX_OPTIONS = 20; // Limite servidor (MARKET-05) - independente de qualquer cap no HTML.
+
+// Valida e normaliza o array de opções de um mercado multiple_choice.
+// Nunca confia em nada vindo do cliente além do que é checado aqui - conta,
+// rótulo, odds e duplicidade são todos revalidados no servidor (MARKET-04),
+// mesmo que o formulário admin já aplique os mesmos limites como UX.
+function validateOptionsInput(rawOptions) {
+  if (!Array.isArray(rawOptions) || rawOptions.length < MIN_OPTIONS || rawOptions.length > MAX_OPTIONS) {
+    throw new ValidationError(`Múltipla escolha precisa ter entre ${MIN_OPTIONS} e ${MAX_OPTIONS} opções.`);
+  }
+
+  const seenLabels = new Set();
+  return rawOptions.map((opt, i) => {
+    const label = opt && typeof opt.label === 'string' ? opt.label.trim() : '';
+    const odds = Number(opt && opt.odds);
+
+    if (!label) {
+      throw new ValidationError('Toda opção precisa de um rótulo não vazio.');
+    }
+    if (!isValidOdds(odds)) {
+      throw new ValidationError('Odds inválidas. Use valores entre 1.01 e 1000.');
+    }
+
+    const key = label.toLowerCase();
+    if (seenLabels.has(key)) {
+      throw new ValidationError('Rótulos de opção duplicados não são permitidos.');
+    }
+    seenLabels.add(key);
+
+    return { label, odds, sortOrder: i };
+  });
 }
 
 // Aceita 'YYYY-MM-DD HH:MM:SS' ou ISO com 'T'/'Z' e normaliza pra timestamp UTC
@@ -59,30 +95,103 @@ class MarketService {
     return markets.map((m) => sanitizeMarket(m, isAdmin));
   }
 
+  // Cria um mercado dos 3 tipos suportados. Ramifica em market_type (default
+  // 'binary' quando ausente - preserva o contrato implícito de hoje pra
+  // qualquer chamador que não envie o campo, MARKET-03). O ramo binary
+  // mantém as checagens de question/odds exatamente como antes, sem
+  // transaction (um único INSERT já é atômico). Os ramos over_under/
+  // multiple_choice gravam o mercado + suas opções numa única transaction
+  // (marketRepository.create + marketOptionRepository.createMany), então
+  // nunca sobra um mercado sem opções nem opções órfãs em caso de erro.
   async createMarket(body, adminId) {
-    const { question, description, odds_yes, odds_no } = body || {};
+    const rawType = (body || {}).market_type;
+    const marketType = rawType === undefined || rawType === null || rawType === '' ? 'binary' : rawType;
 
+    if (!MARKET_TYPES.includes(marketType)) {
+      throw new ValidationError('Tipo de mercado inválido.');
+    }
+
+    const { question, description } = body || {};
     if (typeof question !== 'string' || question.trim().length < 4) {
       throw new ValidationError('A pergunta precisa ter ao menos 4 caracteres.');
     }
-    if (!isValidOdds(Number(odds_yes)) || !isValidOdds(Number(odds_no))) {
-      throw new ValidationError('Odds inválidas. Use valores entre 1.01 e 1000.');
-    }
 
     const { closesAt, revealAt, scheduledOutcome } = parseSchedule(body);
+    // Pitfall 6 (03-RESEARCH.md): novos tipos são resolvidos manualmente
+    // pelo admin, nunca via reveal agendado - scheduled_outcome nunca é
+    // aceito/gravado fora do ramo binary, mesmo que o body o inclua.
+    const finalScheduledOutcome = marketType === 'binary' ? scheduledOutcome : null;
 
-    const market = await marketRepository.create({
-      question: question.trim(),
-      description: (description || '').toString().trim(),
-      oddsYes: Number(odds_yes),
-      oddsNo: Number(odds_no),
-      closesAt,
-      revealAt,
-      scheduledOutcome,
-      createdBy: adminId,
+    if (marketType === 'binary') {
+      const { odds_yes, odds_no } = body || {};
+      if (!isValidOdds(Number(odds_yes)) || !isValidOdds(Number(odds_no))) {
+        throw new ValidationError('Odds inválidas. Use valores entre 1.01 e 1000.');
+      }
+
+      const market = await marketRepository.create({
+        question: question.trim(),
+        description: (description || '').toString().trim(),
+        oddsYes: Number(odds_yes),
+        oddsNo: Number(odds_no),
+        marketType: 'binary',
+        threshold: null,
+        closesAt,
+        revealAt,
+        scheduledOutcome: finalScheduledOutcome,
+        createdBy: adminId,
+      });
+
+      logger.info(`Admin ${adminId} criou o mercado #${market.id}`);
+      return market;
+    }
+
+    let thresholdNum = null;
+    let options;
+
+    if (marketType === 'over_under') {
+      const { threshold, odds_over, odds_under } = body || {};
+      thresholdNum = Number(threshold);
+      if (!Number.isFinite(thresholdNum) || thresholdNum <= 0) {
+        throw new ValidationError('Limite (threshold) inválido. Informe um número maior que zero.');
+      }
+      if (!isValidOdds(Number(odds_over)) || !isValidOdds(Number(odds_under))) {
+        throw new ValidationError('Odds inválidas. Use valores entre 1.01 e 1000.');
+      }
+
+      // Rótulos são derivados server-side do threshold validado, nunca
+      // aceitos como texto livre do admin (decisão travada em STATE.md) -
+      // só as odds são admin-informadas, como em todo outro tipo de mercado.
+      options = [
+        { label: `Over ${thresholdNum}`, odds: Number(odds_over), sortOrder: 0 },
+        { label: `Under ${thresholdNum}`, odds: Number(odds_under), sortOrder: 1 },
+      ];
+    } else {
+      // multiple_choice
+      options = validateOptionsInput((body || {}).options);
+    }
+
+    const market = await transaction(async (client) => {
+      const createdMarket = await marketRepository.create(
+        {
+          question: question.trim(),
+          description: (description || '').toString().trim(),
+          oddsYes: null,
+          oddsNo: null,
+          marketType,
+          threshold: thresholdNum,
+          closesAt,
+          revealAt,
+          scheduledOutcome: finalScheduledOutcome,
+          createdBy: adminId,
+        },
+        client
+      );
+
+      const createdOptions = await marketOptionRepository.createMany(createdMarket.id, options, client);
+      return { ...createdMarket, options: createdOptions };
     });
 
-    logger.info(`Admin ${adminId} criou o mercado #${market.id}`);
+    logger.info(`Admin ${adminId} criou o mercado #${market.id} (${marketType}, ${options.length} opções)`);
     return market;
   }
 
