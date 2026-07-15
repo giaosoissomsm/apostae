@@ -3,6 +3,7 @@ const wagerRepository = require('../repositories/wagerRepository');
 const walletRepository = require('../repositories/walletRepository');
 const userRepository = require('../repositories/userRepository');
 const marketRepository = require('../repositories/marketRepository');
+const marketOptionRepository = require('../repositories/marketOptionRepository');
 const cashoutRepository = require('../repositories/cashoutRepository');
 const money = require('../utils/money');
 const env = require('../config/env');
@@ -12,12 +13,14 @@ const logger = require('../utils/logger');
 
 class WagerService {
   // O dono da aposta é sempre o userId do token - nunca é lido do body.
-  async placeWager(userId, { market_id, choice, amount }) {
+  // choice (binary) e option_id (over_under/multiple_choice) são mutuamente
+  // exclusivos — qual dos dois é válido depende do market_type carregado
+  // dentro da transação, nunca decidido antes de travar o mercado.
+  async placeWager(userId, { market_id, choice, amount, option_id }) {
     const marketId = Number(market_id);
     const wagerAmount = Number(amount);
 
     if (!Number.isFinite(marketId)) throw new ValidationError('market_id inválido.');
-    if (choice !== 'yes' && choice !== 'no') throw new ValidationError("choice precisa ser 'yes' ou 'no'.");
     if (!Number.isFinite(wagerAmount) || wagerAmount <= 0) {
       throw new ValidationError('Valor da aposta precisa ser maior que zero.');
     }
@@ -38,11 +41,36 @@ class WagerService {
       const wallet = await walletRepository.findByUserIdForUpdate(userId, client);
       if (Number(wallet.balance) < wagerAmount) throw new ValidationError('Créditos insuficientes.');
 
-      const odds = choice === 'yes' ? Number(market.odds_yes) : Number(market.odds_no);
-      const potentialPayout = Math.round(wagerAmount * odds * 100) / 100;
+      // Odds sempre derivada server-side (T-03-15) — o cliente nunca informa
+      // odds/potential_payout diretamente. binary preserva o comportamento
+      // de hoje (choice 'yes'/'no' -> odds_yes/odds_no). Pra over_under e
+      // multiple_choice, option_id precisa pertencer a ESTE mercado — o
+      // lookup abaixo é o chokepoint IDOR-safe (MARKET-06/T-03-14): id é
+      // sempre pareado com market_id na mesma query travada, nunca um lookup
+      // solto por id. Uma option_id de outro mercado retorna null aqui e
+      // nunca chega perto de virar uma aposta válida.
+      let odds;
+      let chosenOptionId = null;
+      if (market.market_type === 'binary') {
+        if (choice !== 'yes' && choice !== 'no') throw new ValidationError("choice precisa ser 'yes' ou 'no'.");
+        odds = choice === 'yes' ? Number(market.odds_yes) : Number(market.odds_no);
+      } else {
+        const optionId = Number(option_id);
+        if (!Number.isFinite(optionId)) throw new ValidationError('option_id inválido.');
+        const option = await marketOptionRepository.findByIdForMarket(optionId, market.id, client);
+        if (!option) throw new ValidationError('Opção inválida para esse mercado.');
+        odds = Number(option.odds);
+        chosenOptionId = optionId;
+      }
+
+      // money.multiply substitui o antigo cálculo via arredondamento manual
+      // em ponto flutuante puro (o próprio anti-padrão citado no header de
+      // money.js) — mesmo resultado numérico pra binary, decimal-safe pros
+      // novos tipos.
+      const potentialPayout = money.multiply(wagerAmount, odds);
 
       const createdWager = await wagerRepository.create(
-        { userId, marketId, choice, amount: wagerAmount, oddsAtTime: odds, potentialPayout },
+        { userId, marketId, choice, optionId: chosenOptionId, amount: wagerAmount, oddsAtTime: odds, potentialPayout },
         client
       );
 
