@@ -34,7 +34,7 @@ transactions, even under concurrent access.
 Phase: 04 (bet-cancellation-v2) — EXECUTING
 Plan: 3 of 3
 Status: Phase complete — ready for verification
-Last activity: 2026-07-15 — Phase 04 execution started
+Last activity: 2026-07-15 - Completed quick task 260715-emb: Remove the guard in marketService.deleteMarket blocking deletion of resolved markets
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -190,6 +190,13 @@ None yet.
 - No live Postgres test database is reachable from this environment for any *test*-named DB (only 'apostae' — the dev/prod db — connects; pg_hba.conf/proxy on the DB host rejects even 'postgres' and a freshly-CREATE-DATABASE'd 'apostae_test'). tests/notifications.events.test.js and tests/notifications.idempotency.test.js (Plan 02) and tests/notifications.ownership.test.js, tests/notifications.pagination.test.js, tests/notifications.read-state.test.js (Plan 03) are written and correct per source/mock-backed review but could not be run against real Postgres. Must be resolved (DB host pg_hba/proxy allowlist, or a separate local test Postgres) before Plan 04's own integration tests — and all five existing notification test files — can get a real pass/fail signal.
 - No live *test*-named Postgres database reachable in this sandbox (carried forward through Phase 2 Plan 04) -- tests/cashout.computation.test.js and tests/cashout.validation.test.js are written and correct but unexecuted against real Postgres; compensated via a temporary mock-backed dry run (all 15 assertions passed).
 - No live *test*-named Postgres database reachable in this sandbox — carried forward through Phase 4 Plan 03 (5th consecutive phase). tests/cancel.blocking.test.js, tests/cancel.concurrency.test.js, and the IDOR case in tests/cancel.tampering.test.js are written and correct per structural review + a mutex-based mock-backed dry run (both race orderings exercised for CANCEL-07), but have never executed via jest against real Postgres. Must be resolved before /gsd-verify-work or /gsd-complete-milestone for this milestone.
+- Local `main` is 125 commits ahead of `origin/main` (discovered 2026-07-15 while dispatching a worktree-isolated quick-task executor, which forks from `origin/HEAD` and hit a stale base-mismatch halt). This entire milestone's work (Phases 1-4 plus all quick tasks) exists only in this sandbox's local git history and has never been pushed. Should be pushed to `origin/main` deliberately (not silently) given the volume of unreviewed commits involved.
+
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 260715-emb | Remove the guard in marketService.deleteMarket blocking deletion of resolved markets — explicit product-owner reversal of Phase 1 CR-01, accepting that wagers.market_id's ON DELETE CASCADE will now cascade-delete settled wagers | 2026-07-15 | b34bb9e | [260715-emb-remove-the-guard-in-marketservice-delete](./quick/260715-emb-remove-the-guard-in-marketservice-delete/) |
 
 ## Deferred Items
 
